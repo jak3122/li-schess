@@ -10,7 +10,6 @@
 
 <script>
 import Board from '@/components/Board';
-import socket from '@/sockets/sockets';
 
 export default {
   name: 'GameArea',
@@ -26,7 +25,7 @@ export default {
   },
   methods: {
     play: function(color) {
-      socket.emit('play', color);
+      this.$socket.emit('play', color);
       this.orientation = color;
     },
   },

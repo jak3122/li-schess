@@ -18,6 +18,14 @@ module.exports.socketServer = (io) => {
     socket.on('play', (color) => {
       console.log('adding player', color);
       socket.join('playing');
+      if (players.white && players.white.id === socket.id) {
+        players.white = undefined;
+        io.emit('unsetPlayer', 'white');
+      }
+      if (players.black && players.black.id === socket.id) {
+        players.black = undefined;
+        io.emit('unsetPlayer', 'black');
+      }
       players[color] = socket;
       io.emit('setPlayer', color);
       if (players.white && players.black) {

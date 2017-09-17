@@ -6,7 +6,7 @@ import App from './App';
 import router from './router';
 
 Vue.config.productionTip = false;
-Vue.use(VueSocketio, 'http://localhost:8080');
+Vue.use(VueSocketio, window.location.host);
 
 /* eslint-disable no-new */
 new Vue({
