@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <div class="header">
-      <div class="title">li-schess</div>
+      <div class="title">
+        <router-link to="/">li-schess</router-link>
+      </div>
     </div>
     <router-view></router-view>
   </div>

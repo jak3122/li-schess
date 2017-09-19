@@ -1,5 +1,5 @@
 <template>
-  <div class="board-wrapper">
+  <div class="board-view">
     <div class="schess-buttons">
       <span>
         <input type="checkbox" id="elephantOpponent" @click.prevent.stop :disabled="!elephantOpponentEnabled">
@@ -10,7 +10,10 @@
         <label for="hawkOpponent">hawk</label>
       </span>
     </div>
-    <div id="board"></div>
+    <div id="board-wrapper">
+      <div id="board"></div>
+      <div id="promotion_choice" ref="promotion_choice"></div>
+    </div>
     <div class="schess-buttons">
       <span>
         <input type="checkbox" id="elephant" :disabled="!elephantEnabled" v-model="elephantSelected">
@@ -21,13 +24,14 @@
         <label for="hawk">hawk</label>
       </span>
     </div>
-    <div class="checkmate-message" v-if="inCheckmate">Checkmate - {{ winnerColor }} wins!</div>
   </div>
 </template>
 
 <script>
 import SChess from 'schess.js';
 import Chessground from 'cg/dist/chessground';
+// import { patch } from 'snabbdom';
+// import renderPromotion from "@/chess/promotion";
 
 
 export default {
@@ -36,7 +40,6 @@ export default {
   data() {
     return {
       inCheck: false,
-      inCheckmate: false,
       elephantSelected: false,
       hawkSelected: false,
       elephantEnabled: true,
@@ -57,9 +60,6 @@ export default {
     opponentColor: function() {
       return this.orientation === 'white' ? 'black' : 'white';
     },
-    winnerColor: function() {
-      return this.inCheckmate ? { w: 'Black', b: 'White' }[this.game.turn()] : undefined;
-    },
   },
   methods: {
     turn: function() {
@@ -79,8 +79,23 @@ export default {
       this.elephantOpponentEnabled = this.isPieceInHand('e', this.opponentColor);
       this.hawkOpponentEnabled = this.isPieceInHand('h', this.opponentColor);
     },
+    isPromotion(orig, dest) {
+      const piece = this.ground.state.pieces[dest];
+      if (piece && piece.role === 'pawn') {
+        return true;
+      } else {
+        return false;
+      }
+    },
     onMove: function(orig, dest) {
       console.log("onMove:", orig, dest);
+      // if (this.isPromotion(orig, dest)) {
+      //   // this.ground.setPieces({
+      //   //   color: this.orientation,
+      //   //   role: 
+      //   // })
+      //   patch(this.$refs, renderPromotion(dest, this.orientation, this.orientation));
+      // }
       const move_obj = {
         from: orig, to: dest
       };
@@ -119,7 +134,6 @@ export default {
     updateBoard: function() {
       this.updateSPieceCheckboxes();
       this.inCheck = this.game.in_check();
-      this.inCheckmate = this.game.in_checkmate();
       this.ground.set({
         check: this.game.in_check(),
         turnColor: this.game.game_over() ? undefined : this.turn(),
@@ -184,10 +198,6 @@ export default {
       console.log("got opponent move:", move);
       this.onOpponentMove(move);
     },
-    unsetPlayer: function(color) {
-      this.gameInProgress = false;
-      this.updateBoard();
-    },
   },
 };
 </script>
@@ -198,11 +208,6 @@ export default {
   width: 600px;
   height: 600px;
   margin: 0 auto;
-}
-
-.checkmate-message {
-  text-align: center;
-  margin: 30px;
 }
 
 .schess-buttons {

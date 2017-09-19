@@ -2,8 +2,15 @@
   <div class="game-area">
     <board :orientation="orientation"></board>
     <div class="room-controls">
-      <button :disabled="!blackEnabled" @click="play('black')">Play Black</button>
-      <button :disabled="!whiteEnabled" @click="play('white')">Play White</button>
+      <button :disabled="gameOver" @click="resign">Resign</button>
+    </div>
+    <div class="status-messages">
+      <div v-if="gameOver">Game over.</div>
+      <div v-if="whiteWinsMate">Checkmate - White wins!</div>
+      <div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
+      <div v-else-if="whiteResigned">White resigned.</div>
+      <div v-else-if="blackResigned">Black resigned.</div>
+      <div v-else-if="opponentDisconnected">Opponent disconnected.</div>
     </div>
   </div>
 </template>
@@ -19,32 +26,44 @@ export default {
   data() {
     return {
       orientation: 'white',
-      whiteEnabled: true,
-      blackEnabled: true
+      gameOver: false,
+      whiteWinsMate: false,
+      blackWinsMate: false,
+      whiteResigned: false,
+      blackResigned: false,
+      opponentDisconnected: false,
     };
   },
   methods: {
-    play: function(color) {
-      this.$socket.emit('play', color);
-      this.orientation = color;
+    resign: function() {
+      this.$socket.emit('resign');
     },
   },
   sockets: {
-    setPlayer: function(color) {
-      const colorChar = color.charAt(0);
-      if (colorChar === 'w')
-        this.whiteEnabled = false;
-      else if (colorChar === 'b')
-        this.blackEnabled = false;
+    whiteWinsMate: function() {
+      this.whiteWinsMate = true;
+      this.gameOver = true;
     },
-    unsetPlayer: function(color) {
-      const colorChar = color.charAt(0);
-      if (colorChar === 'w')
-        this.whiteEnabled = true;
-      else if (colorChar === 'b')
-        this.blackEnabled = true;
-    }
-  }
+    blackWinsMate: function() {
+      this.blackWinsMate = true;
+      this.gameOver = true;
+    },
+    whiteResigned: function() {
+      this.whiteResigned = true;
+      this.gameOver = true;
+    },
+    blackResigned: function() {
+      this.blackResigned = true;
+      this.gameOver = true;
+    },
+    opponentDisconnected: function() {
+      this.opponentDisconnected = true;
+      this.gameOver = true;
+    },
+    setColor: function(color) {
+      this.orientation = color;
+    },
+  },
 };
 </script>
 
@@ -67,6 +86,11 @@ export default {
 .room-controls button {
   margin: 10px;
   transform: scale(1.2);
+}
+
+.status-messages {
+  width: 200px;
+  font-size: 14px;
 }
 </style>
 
