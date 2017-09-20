@@ -19,7 +19,11 @@ const handleConnect = (io, socket) => {
 const handleMove = (io, socket, move) => {
 	console.log("got move:", move);
 	const game = sockets[socket.id].game;
-	game.move(move);
+	game.move(
+		Object.assign({}, move, {
+			promotion: move.promotion ? move.promotion.charAt(0) : undefined
+		})
+	);
 	socket.broadcast.emit("opponentMove", move);
 	const roomName = sockets[socket.id].id.toString();
 	if (game.in_checkmate()) {

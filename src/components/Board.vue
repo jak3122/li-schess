@@ -12,7 +12,7 @@
     </div>
     <div id="board-wrapper">
       <div id="board"></div>
-      <div id="promotion_choice" ref="promotion_choice"></div>
+      <promotion v-if="promoting" :orientation="orientation" :dest="promotionDest" :color="orientation" v-on:finish="finishPromotion" v-on:cancel="cancelPromotion"></promotion>
     </div>
     <div class="schess-buttons">
       <span>
@@ -28,14 +28,15 @@
 </template>
 
 <script>
+import Promotion from '@/components/Promotion';
 import SChess from 'schess.js';
 import Chessground from 'cg/dist/chessground';
-// import { patch } from 'snabbdom';
-// import renderPromotion from "@/chess/promotion";
-
 
 export default {
   name: 'Board',
+  components: {
+    promotion: Promotion
+  },
   props: ['orientation'],
   data() {
     return {
@@ -48,6 +49,9 @@ export default {
       hawkOpponentEnabled: true,
       ground: null,
       gameInProgress: false,
+      promoting: false,
+      promotionDest: "",
+      promotionOrig: "",
       game: new SChess()
     };
   },
@@ -81,24 +85,30 @@ export default {
     },
     isPromotion(orig, dest) {
       const piece = this.ground.state.pieces[dest];
-      if (piece && piece.role === 'pawn') {
+      if (piece && piece.role === 'pawn' &&
+        ((this.orientation === "white" && dest.charAt(1) === "8") ||
+          (this.orientation === "black" && dest.charAt(1) === "1"))) {
         return true;
       } else {
         return false;
       }
     },
-    onMove: function(orig, dest) {
-      console.log("onMove:", orig, dest);
-      // if (this.isPromotion(orig, dest)) {
-      //   // this.ground.setPieces({
-      //   //   color: this.orientation,
-      //   //   role: 
-      //   // })
-      //   patch(this.$refs, renderPromotion(dest, this.orientation, this.orientation));
-      // }
+    onMove: function(orig, dest, promotion) {
+      console.log("onMove:", orig, dest, promotion);
+      if (!promotion && this.isPromotion(orig, dest)) {
+        console.log("onMove promotion", orig, dest, promotion);
+        this.promotionOrig = orig;
+        this.promotionDest = dest;
+        this.promoting = true;
+        return;
+      }
       const move_obj = {
         from: orig, to: dest
       };
+      if (promotion) {
+        move_obj.promotion = promotion;
+        move_obj.flags = 'p';
+      }
       const legalMoves = this.game.moves({ verbose: true });
       if (this.elephantSelected) {
         if (legalMoves.some(move => move.from === orig && "s_piece" in move && move.s_piece === 'e')) {
@@ -119,13 +129,26 @@ export default {
       this.updateBoard();
     },
     onOpponentMove: function(move) {
-      this.game.move(move);
+      this.game.move({ ...move, promotion: move.promotion ? move.promotion.charAt(0) : undefined });
       this.ground.move(move.from, move.to);
       if ('s_piece' in move) {
         this.addSPiece(move.s_piece, move.from, this.flipTurn());
       }
+      if ('promotion' in move) {
+        this.setPromotedPiece(move.to, move.promotion, this.flipTurn());
+      }
       this.updateBoard();
       console.log("after opponent move:", this.game.pgn());
+    },
+    setPromotedPiece: function(dest, role, color) {
+      console.log("setPromotedPiece:", dest, role, color);
+      const pieces = {};
+      pieces[dest] = {
+        color,
+        role,
+        promoted: true
+      };
+      this.ground.setPieces(pieces);
     },
     addSPiece: function(pieceType, square, color) {
       const role = { e: 'elephant', h: 'hawk' }[pieceType.charAt(0)];
@@ -159,7 +182,34 @@ export default {
       return dests;
     },
     resetBoard: function() {
-      this.ground.set({ fen: this.game.fen() });
+      const history = this.game.history({ verbose: true });
+      const lastMove = history[history.length - 1];
+      this.ground.set({
+        fen: this.game.fen(),
+        check: this.game.in_check(),
+        turnColor: this.game.game_over() ? undefined : this.turn(),
+        lastMove: lastMove ? [lastMove.from, lastMove.to] : undefined,
+        movable: {
+          free: false,
+          color: this.game.game_over() || !this.gameInProgress ? undefined : this.orientation,
+          dests: this.legalDests(),
+        },
+      });
+    },
+    finishPromotion: function(role) {
+      console.log("finish promotion:", role);
+      this.promoting = false;
+      this.setPromotedPiece(this.promotionDest, role, this.turn());
+      this.onMove(this.promotionOrig, this.promotionDest, role);
+      this.promotionOrig = "";
+      this.promotionDest = "";
+    },
+    cancelPromotion: function() {
+      console.log("cancel promotion");
+      this.promoting = false;
+      this.promotionOrig = "";
+      this.promotionDest = "";
+      this.resetBoard();
     }
   },
   mounted() {
@@ -227,5 +277,9 @@ export default {
 
 .schess-buttons input[type=checkbox]:disabled+label {
   color: #cbcaca;
+}
+
+#board-wrapper {
+  position: relative;
 }
 </style>
