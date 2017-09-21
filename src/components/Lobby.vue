@@ -1,10 +1,15 @@
 <template>
   <div class="lobby">
     <div v-if="currentlySeeking" class="currently-seeking">
-      Waiting for a player to accept your seek...
+      <p>
+        <button @click="cancelSeek">Cancel Seek</button>
+      </p>
+      <p>Waiting for a player to accept your seek...</p>
     </div>
     <div v-else class="new-seek">
-      <button @click="newSeek">Seek Game</button>
+      <p>
+        <button @click="newSeek">Seek Game</button>
+      </p>
     </div>
   </div>
 </template>
@@ -25,6 +30,10 @@ export default {
       this.currentlySeeking = true;
       this.$socket.emit('newSeek');
     },
+    cancelSeek: function() {
+      this.currentlySeeking = false;
+      this.$socket.emit("cancelSeek");
+    }
   },
 
   sockets: {
@@ -43,5 +52,10 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+}
+
+p {
+  text-align: center;
 }
 </style>
