@@ -2,12 +2,14 @@
   <div class="game-area">
     <board :orientation="orientation"></board>
     <div class="room-controls">
-      <button :disabled="gameOver" @click="resign">Resign</button>
+      <div class="player-name opponent">{{ opponentName }}</div>
+      <button v-if="!gameOver" @click="resign">Resign</button>
       <div class="rematch" v-if="gameOver">
         <button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
         <button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
         <button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
       </div>
+      <div class="player-name me">{{ myName }}</div>
     </div>
     <div class="status-messages">
       <div v-if="gameOver">Game over.</div>
@@ -45,10 +47,23 @@ export default {
   data() {
     return {
       orientation: 'white',
+      whiteName: "Anonymous",
+      blackName: "Anonymous",
       ...initialState
     };
   },
+  computed: {
+    myName: function() {
+      return this.orientation === "white" ? this.whiteName : this.blackName;
+    },
+    opponentName: function() {
+      return this.orientation === "white" ? this.blackName : this.whiteName;
+    },
+  },
   methods: {
+    flipBoard: function() {
+      this.orientation === "white" ? this.orientation = "black" : this.orientation = "white";
+    },
     resign: function() {
       this.$socket.emit('resign');
     },
@@ -66,9 +81,14 @@ export default {
     },
   },
   sockets: {
-    startGame: function() {
-      this.pgn = "";
+    startGame: function(data) {
+      console.log("startGame", data);
       Object.assign(this.$data, initialState);
+      this.pgn = "";
+      if (data) {
+        this.whiteName = data.whiteName;
+        this.blackName = data.blackName;
+      }
     },
     whiteWinsMate: function() {
       this.whiteWinsMate = true;
@@ -116,6 +136,7 @@ export default {
 
 .room-controls {
   width: 150px;
+  height: 500px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -124,8 +145,9 @@ export default {
 }
 
 .room-controls button {
-  margin: 10px;
-  transform: scale(1.2);
+  margin: 30px;
+  width: 120px;
+  transform: scale(1.4);
 }
 
 .status-messages {
@@ -138,8 +160,9 @@ export default {
   height: 60px;
 }
 
-.rematch button {
-  width: 120px;
+.player-name {
+  font-size: 18px;
+  letter-spacing: 2px;
 }
 </style>
 

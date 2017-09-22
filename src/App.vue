@@ -8,15 +8,20 @@
         <div>{{ numConnectionsText }}</div>
         <div>{{ numGamesText }}</div>
       </div>
+      <username></username>
     </div>
     <router-view></router-view>
   </div>
 </template>
 
 <script>
+import Username from "@/components/Username";
 
 export default {
   name: 'app',
+  components: {
+    username: Username
+  },
   data() {
     return {
       numConnections: 0,

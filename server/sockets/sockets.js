@@ -32,24 +32,25 @@ const printState = event => {
 
 const handleConnect = (io, socket) => {
 	console.log("A client just joined on", socket.id);
+	sockets[socket.id] = { username: "Anonymous" };
 	numConnections += 1;
 	io.emit("updateNumConnections", numConnections);
 };
 
 const handleMove = (io, socket, move) => {
 	console.log("got move:", move);
-	const game = sockets[socket.id].game;
+	const game = sockets[socket.id].room.game;
 	game.move(
 		Object.assign({}, move, {
 			promotion: move.promotion ? move.promotion.charAt(0) : undefined
 		})
 	);
 	socket.broadcast.emit("opponentMove", move);
-	const roomName = sockets[socket.id].id.toString();
+	const roomName = sockets[socket.id].room.id.toString();
 	if (game.in_checkmate()) {
 		if (game.turn() === "b") io.in(roomName).emit("whiteWinsMate");
 		else io.in(roomName).emit("blackWinsMate");
-		sockets[socket.id].inPlay = false;
+		sockets[socket.id].room.inPlay = false;
 		emitUpdateNumGames(io);
 		io.in(roomName).emit("pgn", game.pgn());
 	}
@@ -58,7 +59,7 @@ const handleMove = (io, socket, move) => {
 const handleDisconnect = (io, socket) => {
 	numConnections -= 1;
 	cancelSeek(socket.id);
-	const room = sockets[socket.id];
+	const room = sockets[socket.id].room;
 	if (room) {
 		room.inPlay = false;
 		socket.to(room.id.toString()).emit("opponentDisconnected");
@@ -85,15 +86,18 @@ const handleNewSeek = (io, socket) => {
 			inPlay: true
 		};
 		rooms.push(newRoom);
-		sockets[white.id] = newRoom;
-		sockets[black.id] = newRoom;
+		sockets[white.id].room = newRoom;
+		sockets[black.id].room = newRoom;
 		const roomName = newRoom.id.toString();
 		white.join(roomName);
 		black.join(roomName);
 		io.in(roomName).emit("seekAccepted");
 		white.emit("setColor", "white");
 		black.emit("setColor", "black");
-		io.in(roomName).emit("startGame");
+		const whiteName = sockets[white.id].username;
+		const blackName = sockets[black.id].username;
+		console.log("startGame", whiteName, blackName);
+		io.in(roomName).emit("startGame", { whiteName, blackName });
 		emitUpdateNumGames(io);
 	} else {
 		seekers.push(socket);
@@ -101,7 +105,7 @@ const handleNewSeek = (io, socket) => {
 };
 
 const handleResign = (io, socket) => {
-	const room = sockets[socket.id];
+	const room = sockets[socket.id].room;
 	const roomName = room.id.toString();
 	if (socket.id === room.white.id) {
 		io.in(roomName).emit("whiteResigned");
@@ -123,21 +127,21 @@ const emitUpdateNumGames = io => {
 };
 
 const handleOfferRematch = (io, socket) => {
-	const room = sockets[socket.id];
+	const room = sockets[socket.id].room;
 	const roomName = room.id.toString();
 	room.rematchOfferedBy = socket.id;
 	socket.to(roomName).emit("offerRematch");
 };
 
 const handleCancelRematch = (io, socket) => {
-	const room = sockets[socket.id];
+	const room = sockets[socket.id].room;
 	const roomName = room.id.toString();
 	room.rematchOfferedBy = undefined;
 	socket.to(roomName).emit("cancelRematch");
 };
 
 const handleAcceptRematch = (io, socket) => {
-	const room = sockets[socket.id];
+	const room = sockets[socket.id].room;
 	const roomName = room.id.toString();
 	room.rematchOfferedBy = undefined;
 	room.white = room.players[1];
@@ -147,9 +151,19 @@ const handleAcceptRematch = (io, socket) => {
 	room.inPlay = true;
 	room.white.emit("setColor", "white");
 	room.black.emit("setColor", "black");
-	io.in(roomName).emit("startGame");
+	const whiteName = sockets[room.white.id].username;
+	const blackName = sockets[room.black.id].username;
+	io.in(roomName).emit("startGame", { whiteName, blackName });
 	emitUpdateNumGames(io);
 	socket.to(roomName).emit("acceptRematch");
+};
+
+const handleSetUsername = (io, socket, name) => {
+	sockets[socket.id].username = name.slice(0, 20);
+};
+
+const handleClearUsername = (io, socket) => {
+	sockets[socket.id].username = "Anonymous";
 };
 
 module.exports.socketServer = io => {
@@ -195,6 +209,16 @@ module.exports.socketServer = io => {
 		socket.on("acceptRematch", () => {
 			handleAcceptRematch(io, socket);
 			printState("acceptRematch");
+		});
+
+		socket.on("setUsername", name => {
+			handleSetUsername(io, socket, name);
+			printState("setUsername");
+		});
+
+		socket.on("clearUsername", () => {
+			handleClearUsername(io, socket);
+			printState("clearUsername");
 		});
 	});
 };
