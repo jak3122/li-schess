@@ -3,6 +3,11 @@
     <board :orientation="orientation"></board>
     <div class="room-controls">
       <button :disabled="gameOver" @click="resign">Resign</button>
+      <div class="rematch" v-if="gameOver">
+        <button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
+        <button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
+        <button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
+      </div>
     </div>
     <div class="status-messages">
       <div v-if="gameOver">Game over.</div>
@@ -21,6 +26,17 @@
 <script>
 import Board from '@/components/Board';
 
+const initialState = {
+  gameOver: false,
+  whiteWinsMate: false,
+  blackWinsMate: false,
+  whiteResigned: false,
+  blackResigned: false,
+  opponentDisconnected: false,
+  pgn: "",
+  rematchStatus: "initial",
+}
+
 export default {
   name: 'GameArea',
   components: {
@@ -29,21 +45,31 @@ export default {
   data() {
     return {
       orientation: 'white',
-      gameOver: false,
-      whiteWinsMate: false,
-      blackWinsMate: false,
-      whiteResigned: false,
-      blackResigned: false,
-      opponentDisconnected: false,
-      pgn: "",
+      ...initialState
     };
   },
   methods: {
     resign: function() {
       this.$socket.emit('resign');
     },
+    offerRematch: function() {
+      this.rematchStatus = "offered";
+      this.$socket.emit("offerRematch");
+    },
+    cancelRematch: function() {
+      this.rematchStatus = "initial";
+      this.$socket.emit("cancelRematch");
+    },
+    acceptRematch: function() {
+      this.rematchStatus = "initial";
+      this.$socket.emit("acceptRematch");
+    },
   },
   sockets: {
+    startGame: function() {
+      this.pgn = "";
+      Object.assign(this.$data, initialState);
+    },
     whiteWinsMate: function() {
       this.whiteWinsMate = true;
       this.gameOver = true;
@@ -69,7 +95,13 @@ export default {
     },
     pgn: function(pgn) {
       this.pgn = pgn;
-    }
+    },
+    offerRematch: function() {
+      this.rematchStatus = "pending";
+    },
+    cancelRematch: function() {
+      this.rematchStatus = "initial";
+    },
   },
 };
 </script>
@@ -83,6 +115,7 @@ export default {
 }
 
 .room-controls {
+  width: 150px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -103,6 +136,10 @@ export default {
 .pgn {
   width: 150px;
   height: 60px;
+}
+
+.rematch button {
+  width: 120px;
 }
 </style>
 

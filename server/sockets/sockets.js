@@ -122,6 +122,36 @@ const emitUpdateNumGames = io => {
 	io.emit("updateNumGames", rooms.filter(r => r.inPlay === true).length);
 };
 
+const handleOfferRematch = (io, socket) => {
+	const room = sockets[socket.id];
+	const roomName = room.id.toString();
+	room.rematchOfferedBy = socket.id;
+	socket.to(roomName).emit("offerRematch");
+};
+
+const handleCancelRematch = (io, socket) => {
+	const room = sockets[socket.id];
+	const roomName = room.id.toString();
+	room.rematchOfferedBy = undefined;
+	socket.to(roomName).emit("cancelRematch");
+};
+
+const handleAcceptRematch = (io, socket) => {
+	const room = sockets[socket.id];
+	const roomName = room.id.toString();
+	room.rematchOfferedBy = undefined;
+	room.white = room.players[1];
+	room.black = room.players[0];
+	room.players = [room.white, room.black];
+	room.game = new SChess();
+	room.inPlay = true;
+	room.white.emit("setColor", "white");
+	room.black.emit("setColor", "black");
+	io.in(roomName).emit("startGame");
+	emitUpdateNumGames(io);
+	socket.to(roomName).emit("acceptRematch");
+};
+
 module.exports.socketServer = io => {
 	io.on("connection", socket => {
 		handleConnect(io, socket);
@@ -150,6 +180,21 @@ module.exports.socketServer = io => {
 		socket.on("resign", () => {
 			handleResign(io, socket);
 			printState("resign");
+		});
+
+		socket.on("offerRematch", () => {
+			handleOfferRematch(io, socket);
+			printState("offerRematch");
+		});
+
+		socket.on("cancelRematch", () => {
+			handleCancelRematch(io, socket);
+			printState("cancelRematch");
+		});
+
+		socket.on("acceptRematch", () => {
+			handleAcceptRematch(io, socket);
+			printState("acceptRematch");
 		});
 	});
 };
