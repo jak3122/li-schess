@@ -11,6 +11,9 @@
       <div v-else-if="whiteResigned">White resigned.</div>
       <div v-else-if="blackResigned">Black resigned.</div>
       <div v-else-if="opponentDisconnected">Opponent disconnected.</div>
+      <div v-if="pgn">
+        <textarea readonly class="pgn" v-model="pgn"></textarea>
+      </div>
     </div>
   </div>
 </template>
@@ -32,6 +35,7 @@ export default {
       whiteResigned: false,
       blackResigned: false,
       opponentDisconnected: false,
+      pgn: "",
     };
   },
   methods: {
@@ -63,6 +67,9 @@ export default {
     setColor: function(color) {
       this.orientation = color;
     },
+    pgn: function(pgn) {
+      this.pgn = pgn;
+    }
   },
 };
 </script>
@@ -91,6 +98,11 @@ export default {
 .status-messages {
   width: 200px;
   font-size: 14px;
+}
+
+.pgn {
+  width: 150px;
+  height: 60px;
 }
 </style>
 

@@ -2,8 +2,6 @@
 // import SChess from "schess.js";
 const SChess = require("schess.js").SChess;
 
-// const gameState = new SChess();
-
 const seekers = [];
 
 const rooms = [];
@@ -16,15 +14,17 @@ let numConnections = 0;
 
 const printState = event => {
 	console.log();
-	console.log(event, "-".repeat(50 - event.length - 1));
+	console.log(
+		event,
+		"-".repeat(50 - event.length - 1),
+		new Date().toLocaleString()
+	);
 	console.log(`# connections: ${numConnections}`);
 	console.log(`# seeks: ${seekers.length}`);
 	console.log(`# rooms: ${rooms.length}`);
 	console.log("rooms:");
 	rooms
-		.map(
-			r => `[${r.id}: ${r.white.id} vs ${r.black.id}, inPlay:${r.inPlay}]`
-		)
+		.map(r => `[${r.id}: ${r.game.pgn()}, inPlay:${r.inPlay}]`)
 		.forEach(r => console.log(r));
 	console.log("-".repeat(50));
 	console.log();
@@ -51,6 +51,7 @@ const handleMove = (io, socket, move) => {
 		else io.in(roomName).emit("blackWinsMate");
 		sockets[socket.id].inPlay = false;
 		emitUpdateNumGames(io);
+		io.in(roomName).emit("pgn", game.pgn());
 	}
 };
 
@@ -61,6 +62,7 @@ const handleDisconnect = (io, socket) => {
 	if (room) {
 		room.inPlay = false;
 		socket.to(room.id.toString()).emit("opponentDisconnected");
+		io.in(room.id.toString()).emit("pgn", room.game.pgn());
 	}
 	io.emit("updateNumConnections", numConnections);
 	emitUpdateNumGames(io);
@@ -108,6 +110,7 @@ const handleResign = (io, socket) => {
 	}
 	room.inPlay = false;
 	emitUpdateNumGames(io);
+	io.in(roomName).emit("pgn", room.game.pgn());
 };
 
 const cancelSeek = socketId => {
