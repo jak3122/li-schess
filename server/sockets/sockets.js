@@ -2,7 +2,7 @@
 // import SChess from "schess.js";
 const SChess = require("schess.js").SChess;
 
-const seekers = [];
+const seeks = [];
 
 const rooms = [];
 
@@ -20,7 +20,7 @@ const printState = event => {
 		new Date().toLocaleString()
 	);
 	console.log(`# connections: ${numConnections}`);
-	console.log(`# seeks: ${seekers.length}`);
+	console.log(`# seeks: ${seeks.length}`);
 	console.log(`# rooms: ${rooms.length}`);
 	console.log("rooms:");
 	rooms
@@ -32,7 +32,7 @@ const printState = event => {
 
 const handleConnect = (io, socket) => {
 	console.log("A client just joined on", socket.id);
-	sockets[socket.id] = { username: "Anonymous" };
+	sockets[socket.id] = { username: "Anonymous", socket };
 	numConnections += 1;
 	io.emit("updateNumConnections", numConnections);
 };
@@ -58,7 +58,7 @@ const handleMove = (io, socket, move) => {
 
 const handleDisconnect = (io, socket) => {
 	numConnections -= 1;
-	cancelSeek(socket.id);
+	removeSeek(io, socket.id);
 	const room = sockets[socket.id].room;
 	if (room) {
 		room.inPlay = false;
@@ -70,38 +70,51 @@ const handleDisconnect = (io, socket) => {
 };
 
 const handleNewSeek = (io, socket) => {
-	if (seekers.length > 0) {
-		const players =
-			Math.random() > 0.5
-				? [socket, seekers.pop()]
-				: [seekers.pop(), socket];
-		const white = players[0];
-		const black = players[1];
-		const newRoom = {
-			id: nextRoomid++,
-			white,
-			black,
-			players,
-			game: new SChess(),
-			inPlay: true
-		};
-		rooms.push(newRoom);
-		sockets[white.id].room = newRoom;
-		sockets[black.id].room = newRoom;
-		const roomName = newRoom.id.toString();
-		white.join(roomName);
-		black.join(roomName);
-		io.in(roomName).emit("seekAccepted");
-		white.emit("setColor", "white");
-		black.emit("setColor", "black");
-		const whiteName = sockets[white.id].username;
-		const blackName = sockets[black.id].username;
-		console.log("startGame", whiteName, blackName);
-		io.in(roomName).emit("startGame", { whiteName, blackName });
-		emitUpdateNumGames(io);
-	} else {
-		seekers.push(socket);
-	}
+	const seek = {
+		username: sockets[socket.id].username,
+		id: socket.id
+	};
+
+	seeks.push(seek);
+	io.to("lobby").emit("newSeek", seek);
+};
+
+const removeSeek = (io, id) => {
+	const index = seeks.findIndex(seek => seek.id === id);
+	if (index !== -1) seeks.splice(index, 1);
+	io.to("lobby").emit("removeSeek", id);
+};
+
+const handleAcceptSeek = (io, socket, seek) => {
+	const otherPlayer = sockets[seek.id].socket;
+	const players =
+		Math.random() > 0.5 ? [socket, otherPlayer] : [otherPlayer, socket];
+	const white = players[0];
+	const black = players[1];
+	const newRoom = {
+		id: nextRoomid++,
+		white,
+		black,
+		players,
+		game: new SChess(),
+		inPlay: true
+	};
+	rooms.push(newRoom);
+	sockets[white.id].room = newRoom;
+	sockets[black.id].room = newRoom;
+	const roomName = newRoom.id.toString();
+	white.join(roomName);
+	black.join(roomName);
+	io.in(roomName).emit("seekAccepted");
+	white.emit("setColor", "white");
+	black.emit("setColor", "black");
+	const whiteName = sockets[white.id].username;
+	const blackName = sockets[black.id].username;
+	console.log("startGame", whiteName, blackName);
+	io.in(roomName).emit("startGame", { whiteName, blackName });
+	removeSeek(io, seek.id);
+	removeSeek(io, socket.id);
+	emitUpdateNumGames(io);
 };
 
 const handleResign = (io, socket) => {
@@ -115,11 +128,6 @@ const handleResign = (io, socket) => {
 	room.inPlay = false;
 	emitUpdateNumGames(io);
 	io.in(roomName).emit("pgn", room.game.pgn());
-};
-
-const cancelSeek = socketId => {
-	const index = seekers.findIndex(seeker => seeker.id === socketId);
-	if (index !== -1) seekers.splice(index, 1);
 };
 
 const emitUpdateNumGames = io => {
@@ -171,6 +179,12 @@ module.exports.socketServer = io => {
 		handleConnect(io, socket);
 		printState("connection");
 
+		socket.on("joinedLobby", () => {
+			socket.join("lobby");
+			socket.emit("allSeeks", seeks);
+		});
+		socket.on("leftLobby", () => socket.leave("lobby"));
+
 		socket.on("move", move => {
 			handleMove(io, socket, move);
 			printState("move");
@@ -186,8 +200,13 @@ module.exports.socketServer = io => {
 			printState("newSeek");
 		});
 
+		socket.on("acceptSeek", seek => {
+			handleAcceptSeek(io, socket, seek);
+			printState("acceptSeek");
+		});
+
 		socket.on("cancelSeek", () => {
-			cancelSeek(socket.id);
+			removeSeek(io, socket.id);
 			printState("cancelSeek");
 		});
 
