@@ -1,48 +1,38 @@
 <template>
   <div class="board-view">
     <div class="schess-buttons">
-      <span>
-        <input type="checkbox" id="elephantOpponent" @click.prevent.stop :disabled="!elephantOpponentEnabled">
-        <label for="elephantOpponent">elephant</label>
+      <span :class="{ active: elephantOpponentEnabled }">elephant</span>
       </span>
-      <span>
-        <input type="checkbox" id="hawkOpponent" @click.prevent.stop :disabled="!hawkOpponentEnabled">
-        <label for="hawkOpponent">hawk</label>
-      </span>
+      <span :class="{ active: hawkOpponentEnabled }">hawk</span>
     </div>
     <div id="board-wrapper">
       <div id="board"></div>
       <promotion v-if="promoting" :orientation="orientation" :dest="promotionDest" :color="orientation" v-on:finish="finishPromotion" v-on:cancel="cancelPromotion"></promotion>
+      <sPieceSelector v-if="addingSPiece" :roles="sPieceRoles" :orientation="orientation" :dest="sPieceSquare" :color="orientation" v-on:finish="finishSPiece" v-on:cancel="cancelSPiece"></sPieceSelector>
     </div>
     <div class="schess-buttons">
-      <span>
-        <input type="checkbox" id="elephant" :disabled="!elephantEnabled" v-model="elephantSelected">
-        <label for="elephant">elephant</label>
-      </span>
-      <span>
-        <input type="checkbox" id="hawk" :disabled="!hawkEnabled" v-model="hawkSelected">
-        <label for="hawk">hawk</label>
-      </span>
+      <span :class="{ active: elephantEnabled }">elephant</span>
+      <span :class="{ active: hawkEnabled }">hawk</span>
     </div>
   </div>
 </template>
 
 <script>
-import Promotion from '@/components/Promotion';
 import SChess from 'schess.js';
 import Chessground from 'cg/dist/chessground';
+import Promotion from '@/components/Promotion';
+import SPieceSelector from "@/components/SPieceSelector";
 
 export default {
   name: 'Board',
   components: {
-    promotion: Promotion
+    promotion: Promotion,
+    sPieceSelector: SPieceSelector
   },
   props: ['orientation'],
   data() {
     return {
       inCheck: false,
-      elephantSelected: false,
-      hawkSelected: false,
       elephantEnabled: true,
       hawkEnabled: true,
       elephantOpponentEnabled: true,
@@ -52,6 +42,10 @@ export default {
       promoting: false,
       promotionDest: "",
       promotionOrig: "",
+      addingSPiece: false,
+      sPieceRoles: [],
+      sPieceSquare: "",
+      sPieceMoveDest: "",
       game: new SChess()
     };
   },
@@ -93,13 +87,27 @@ export default {
         return false;
       }
     },
-    onMove: function(orig, dest, promotion) {
+    moveCanAddSPiece(orig, legalMoves) {
+      return legalMoves.some(move => move.from === orig && "s_piece" in move);
+    },
+    onMove: function(orig, dest, promotion, s_piece) {
       console.log("onMove:", orig, dest, promotion);
+      const legalMoves = this.game.moves({ verbose: true });
       if (!promotion && this.isPromotion(orig, dest)) {
         console.log("onMove promotion", orig, dest, promotion);
         this.promotionOrig = orig;
         this.promotionDest = dest;
         this.promoting = true;
+        return;
+      }
+      if (!this.addingSPiece && this.moveCanAddSPiece(orig, legalMoves)) {
+        console.log("doing spiece");
+        this.sPieceRoles = this.game.get_hand()[this.game.turn()].map(p => {
+          return { 'e': 'elephant', 'h': 'hawk' }[p.type];
+        });
+        this.sPieceSquare = orig;
+        this.sPieceMoveDest = dest;
+        this.addingSPiece = true;
         return;
       }
       const move_obj = {
@@ -109,20 +117,8 @@ export default {
         move_obj.promotion = promotion;
         move_obj.flags = 'p';
       }
-      const legalMoves = this.game.moves({ verbose: true });
-      if (this.elephantSelected) {
-        if (legalMoves.some(move => move.from === orig && "s_piece" in move && move.s_piece === 'e')) {
-          move_obj.s_piece = 'e';
-          this.addSPiece('elephant', orig, this.turn());
-        }
-        this.elephantSelected = false;
-      }
-      if (this.hawkSelected) {
-        if (legalMoves.some(move => move.from === orig && "s_piece" in move && move.s_piece === 'h')) {
-          move_obj.s_piece = 'h';
-          this.addSPiece('hawk', orig, this.turn());
-        }
-        this.hawkSelected = false;
+      if (s_piece) {
+        move_obj.s_piece = s_piece.charAt(0);
       }
       this.$socket.emit('move', move_obj);
       const moveResult = this.game.move(
@@ -159,6 +155,7 @@ export default {
       this.ground.setPieces(pieces);
     },
     addSPiece: function(pieceType, square, color) {
+      console.log("put spiece on board:", pieceType, square, color);
       const role = { e: 'elephant', h: 'hawk' }[pieceType.charAt(0)];
       this.ground.setPieces({ [square]: { role: role, color } });
     },
@@ -217,6 +214,21 @@ export default {
       this.promoting = false;
       this.promotionOrig = "";
       this.promotionDest = "";
+      this.resetBoard();
+    },
+    finishSPiece: function(role) {
+      console.log("finish spiece:", role);
+      this.onMove(this.sPieceSquare, this.sPieceMoveDest, undefined, role);
+      if (role)
+        this.addSPiece(role, this.sPieceSquare, this.flipTurn());
+      this.addingSPiece = false;
+      this.sPieceSquare = "";
+      this.sPieceMoveDest = "";
+    },
+    cancelSPiece: function() {
+      this.addingSPiece = false;
+      this.sPieceSelector = "";
+      this.sPieceMoveDest = "";
       this.resetBoard();
     }
   },
@@ -277,6 +289,10 @@ export default {
 
 .schess-buttons span {
   margin: 10px;
+}
+
+.schess-buttons span:not(.active) {
+  color: #ddd;
 }
 
 .schess-buttons input[type=checkbox] {
