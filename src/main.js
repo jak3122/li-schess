@@ -6,6 +6,7 @@ import App from './App';
 import router from './router';
 
 Vue.config.productionTip = false;
+Vue.config.ignoredElements = ['square', 'piece'];
 Vue.use(VueSocketio, window.location.host);
 
 /* eslint-disable no-new */
