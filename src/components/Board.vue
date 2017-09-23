@@ -128,6 +128,10 @@ export default {
       const moveResult = this.game.move(
         { ...move_obj, promotion: move_obj.promotion ? move_obj.promotion.charAt(0) : undefined }
       );
+      if (moveResult === null) {
+        this.resetBoard();
+        return;
+      }
       console.log("move_obj:", move_obj);
       console.log("moveResult", moveResult);
       this.updateBoard();
