@@ -125,7 +125,11 @@ export default {
         this.hawkSelected = false;
       }
       this.$socket.emit('move', move_obj);
-      this.game.move(move_obj);
+      const moveResult = this.game.move(
+        { ...move_obj, promotion: move_obj.promotion ? move_obj.promotion.charAt(0) : undefined }
+      );
+      console.log("move_obj:", move_obj);
+      console.log("moveResult", moveResult);
       this.updateBoard();
     },
     onOpponentMove: function(move) {
