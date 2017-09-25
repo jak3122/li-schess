@@ -17,14 +17,22 @@ const printState = event => {
 	console.log(
 		event,
 		"-".repeat(50 - event.length - 1),
-		new Date().toLocaleString()
+		new Date().toLocaleString("en-US", {
+			timeZone: "America/New_York",
+			timeZoneName: "short"
+		})
 	);
 	console.log(`# connections: ${numConnections}`);
 	console.log(`# seeks: ${seeks.length}`);
 	console.log(`# rooms: ${rooms.length}`);
 	console.log("rooms:");
 	rooms
-		.map(r => `[${r.id}: ${r.game.pgn()}, inPlay:${r.inPlay}]`)
+		.map(r => {
+			const wName = sockets[r.white.id].username;
+			const bName = sockets[r.black.id].username;
+			return `[${r.id}: ${wName}<${r.white.id}> vs ${bName}<${r.black
+				.id}>, ${r.game.pgn()}, inPlay:${r.inPlay}]`;
+		})
 		.forEach(r => console.log(r));
 	console.log("-".repeat(50));
 	console.log();
