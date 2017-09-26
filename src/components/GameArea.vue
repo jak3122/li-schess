@@ -1,5 +1,14 @@
 <template>
   <div class="game-area">
+    <div class="chat">
+      <ul ref="chatbox">
+        <li v-for="(message, index) in chatMessages" :key="index">{{ message }}</li>
+      </ul>
+      <div class="chat-input">
+        <input v-on:keyup.enter="sendChat" v-model="chatInput" />
+        <button @click="sendChat">send</button>
+      </div>
+    </div>
     <board :orientation="orientation"></board>
     <div class="room-controls">
       <div class="player-name opponent">{{ opponentName }}</div>
@@ -49,6 +58,8 @@ export default {
       orientation: 'white',
       whiteName: "Anonymous",
       blackName: "Anonymous",
+      chatMessages: [],
+      chatInput: "",
       ...initialState
     };
   },
@@ -59,6 +70,9 @@ export default {
     opponentName: function() {
       return this.orientation === "white" ? this.blackName : this.whiteName;
     },
+  },
+  updated() {
+    this.$refs.chatbox.scrollTop = this.$refs.chatbox.scrollHeight;
   },
   methods: {
     flipBoard: function() {
@@ -79,6 +93,10 @@ export default {
       this.rematchStatus = "initial";
       this.$socket.emit("acceptRematch");
     },
+    sendChat: function() {
+      this.$socket.emit("chatMessage", this.chatInput);
+      this.chatInput = "";
+    }
   },
   sockets: {
     startGame: function(data) {
@@ -122,6 +140,9 @@ export default {
     cancelRematch: function() {
       this.rematchStatus = "initial";
     },
+    newChatMessage: function(message) {
+      this.chatMessages.push(message);
+    }
   },
 };
 </script>
@@ -134,9 +155,19 @@ export default {
   justify-content: center;
 }
 
+.right-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.room-controls-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
 .room-controls {
   width: 150px;
-  height: 500px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -163,6 +194,37 @@ export default {
 .player-name {
   font-size: 18px;
   letter-spacing: 2px;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+  width: 300px;
+  margin-right: 5px;
+  border: 1px solid darkgray;
+}
+
+.chat ul {
+  list-style: none;
+  margin: 0;
+  padding: 20px;
+  flex: 1;
+  overflow-y: scroll;
+  word-wrap: break-word;
+}
+
+.chat li {
+  padding: 3px 0;
+}
+
+.chat .chat-input {
+  display: flex;
+  flex-direction: row;
+}
+
+.chat input {
+  flex: 1;
 }
 </style>
 

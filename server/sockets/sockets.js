@@ -182,6 +182,13 @@ const handleClearUsername = (io, socket) => {
 	sockets[socket.id].username = "Anonymous";
 };
 
+const handleChatMessage = (io, socket, message) => {
+	const roomId = sockets[socket.id].room.id.toString();
+	const username = sockets[socket.id].username;
+	console.log("received chat:", message, username);
+	io.in(roomId).emit("newChatMessage", `${username}: ${message}`);
+};
+
 module.exports.socketServer = io => {
 	io.on("connection", socket => {
 		handleConnect(io, socket);
@@ -246,6 +253,10 @@ module.exports.socketServer = io => {
 		socket.on("clearUsername", () => {
 			handleClearUsername(io, socket);
 			printState("clearUsername");
+		});
+
+		socket.on("chatMessage", message => {
+			handleChatMessage(io, socket, message);
 		});
 	});
 };
