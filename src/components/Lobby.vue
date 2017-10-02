@@ -19,18 +19,28 @@
         </tr>
       </table>
     </div>
+    <div class="game-list">
+      <miniBoard v-for="game in gameList" :key="game.id" :fen="game.fen" :white="game.white" :black="game.black"></miniBoard>
+    </div>
   </div>
 </template>
 
 <script>
+import BoardMini from '@/components/BoardMini';
+
 export default {
 
   name: 'Lobby',
 
+  components: {
+    miniBoard: BoardMini
+  },
+
   data() {
     return {
       currentlySeeking: false,
-      seeks: []
+      seeks: [],
+      gameList: []
     }
   },
 
@@ -71,6 +81,20 @@ export default {
     },
     allSeeks: function(seeks) {
       this.seeks = seeks;
+    },
+    gameList: function(gameList) {
+      console.log("game list:", gameList);
+      this.gameList = gameList;
+    },
+    gameListUpdate: function(update) {
+      console.log("update:", update);
+      console.log("gameList:", this.gameList);
+      const index = this.gameList.findIndex(game => game.id === update.id);
+      if (index !== -1) {
+        console.log("updating", index);
+        const game = this.gameList[index];
+        this.gameList.splice(index, 1, { ...game, fen: update.fen });
+      }
     }
   },
 
@@ -118,5 +142,12 @@ td {
 
 .seek-list tr:hover {
   background-color: #f5f5f5
+}
+
+.game-list {
+  width: 1000px;
+  display: grid;
+  grid-template-rows: 333px 333px 333px;
+  grid-template-columns: 333px 333px 333px;
 }
 </style>

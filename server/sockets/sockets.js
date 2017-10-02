@@ -31,7 +31,7 @@ const printState = event => {
 			const wName = sockets[r.white.id].username;
 			const bName = sockets[r.black.id].username;
 			return `[${r.id}: ${wName}<${r.white.id}> vs ${bName}<${r.black
-				.id}>, ${r.game.pgn()}, inPlay:${r.inPlay}]`;
+				.id}>, ${r.game.pgn()}, ${r.currentFen}, inPlay:${r.inPlay}]`;
 		})
 		.forEach(r => console.log(r));
 	console.log("-".repeat(50));
@@ -47,18 +47,21 @@ const handleConnect = (io, socket) => {
 
 const handleMove = (io, socket, move) => {
 	console.log("got move:", move);
-	const game = sockets[socket.id].room.game;
+	const room = sockets[socket.id].room;
+	const game = room.game;
 	game.move(
 		Object.assign({}, move, {
 			promotion: move.promotion ? move.promotion.charAt(0) : undefined
 		})
 	);
+	room.currentFen = game.fen();
 	socket.broadcast.emit("opponentMove", move);
-	const roomName = sockets[socket.id].room.id.toString();
+	emitGameListUpdate(io, room.id);
+	const roomName = room.id.toString();
 	if (game.in_checkmate()) {
 		if (game.turn() === "b") io.in(roomName).emit("whiteWinsMate");
 		else io.in(roomName).emit("blackWinsMate");
-		sockets[socket.id].room.inPlay = false;
+		room.inPlay = false;
 		emitUpdateNumGames(io);
 		io.in(roomName).emit("pgn", game.pgn());
 	}
@@ -105,6 +108,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 		black,
 		players,
 		game: new SChess(),
+		currentFen: new SChess().fen(),
 		inPlay: true
 	};
 	rooms.push(newRoom);
@@ -120,6 +124,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 	const blackName = sockets[black.id].username;
 	console.log("startGame", whiteName, blackName);
 	io.in(roomName).emit("startGame", { whiteName, blackName });
+	emitGameListUpdate(io, newRoom.id);
 	removeSeek(io, seek.id);
 	removeSeek(io, socket.id);
 	emitUpdateNumGames(io);
@@ -172,6 +177,7 @@ const handleAcceptRematch = (io, socket) => {
 	io.in(roomName).emit("startGame", { whiteName, blackName });
 	emitUpdateNumGames(io);
 	socket.to(roomName).emit("acceptRematch");
+	emitGameListUpdate(io, room.id);
 };
 
 const handleSetUsername = (io, socket, name) => {
@@ -189,14 +195,45 @@ const handleChatMessage = (io, socket, message) => {
 	io.in(roomId).emit("newChatMessage", `${username}: ${message}`);
 };
 
+const handleJoinedLobby = (io, socket) => {
+	socket.join("lobby");
+	socket.emit("allSeeks", seeks);
+	const gameList = rooms
+		.filter(room => room.inPlay === true)
+		.slice(-9)
+		.map(room => {
+			const white = sockets[room.white.id];
+			const black = sockets[room.black.id];
+			return {
+				id: room.id,
+				white: white ? white.username : undefined,
+				black: black ? black.username : undefined,
+				fen: room.currentFen
+			};
+		});
+	socket.emit("gameList", gameList);
+};
+
+const emitGameListUpdate = (io, id) => {
+	const room = rooms.find(room => room.id === id);
+	const white = sockets[room.white.id];
+	const black = sockets[room.black.id];
+	const update = {
+		id,
+		fen: room.currentFen,
+		white: white ? white.username : undefined,
+		black: black ? black.username : undefined
+	};
+	io.in("lobby").emit("gameListUpdate", update);
+};
+
 module.exports.socketServer = io => {
 	io.on("connection", socket => {
 		handleConnect(io, socket);
 		printState("connection");
 
 		socket.on("joinedLobby", () => {
-			socket.join("lobby");
-			socket.emit("allSeeks", seeks);
+			handleJoinedLobby(io, socket);
 		});
 		socket.on("leftLobby", () => socket.leave("lobby"));
 
