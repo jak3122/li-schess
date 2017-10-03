@@ -73,6 +73,7 @@ export default {
   },
   updated() {
     this.$refs.chatbox.scrollTop = this.$refs.chatbox.scrollHeight;
+    document.title = `${this.whiteName} vs ${this.blackName} - li-schess`;
   },
   methods: {
     flipBoard: function() {

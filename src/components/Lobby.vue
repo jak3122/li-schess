@@ -46,6 +46,7 @@ export default {
 
   created() {
     this.$socket.emit("joinedLobby");
+    document.title = "li-schess";
   },
 
   beforeDestroy() {
