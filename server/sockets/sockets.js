@@ -181,11 +181,18 @@ const handleClearUsername = (io, socket) => {
 	sockets[socket.id].username = "Anonymous";
 };
 
-const handleChatMessage = (io, socket, message) => {
+const handleSpectatorChatMessage = (io, socket, message) => {
 	const roomId = sockets[socket.id].room.id;
 	const username = sockets[socket.id].username;
-	console.log(`[chat ${roomId}] ${username}:`, message);
-	io.in(roomId).emit("newChatMessage", `${username}: ${message}`);
+	console.log(`[(s)chat ${roomId}] ${username}:`, message);
+	io.in(roomId).emit("newSpectatorChatMessage", `${username}: ${message}`);
+};
+
+const handleGameChatMessage = (io, socket, message) => {
+	const roomId = sockets[socket.id].room.id;
+	const username = sockets[socket.id].username;
+	console.log(`[(g)chat ${roomId}] ${username}:`, message);
+	io.in(roomId).emit("newGameChatMessage", `${username}: ${message}`);
 };
 
 const handleJoinedLobby = (io, socket) => {
@@ -334,8 +341,12 @@ module.exports.socketServer = io => {
 			printState("clearUsername");
 		});
 
-		socket.on("chatMessage", message => {
-			handleChatMessage(io, socket, message);
+		socket.on("spectatorChatMessage", message => {
+			handleSpectatorChatMessage(io, socket, message);
+		});
+
+		socket.on("gameChatMessage", message => {
+			handleGameChatMessage(io, socket, message);
 		});
 
 		socket.on("joinRoom", roomName => {

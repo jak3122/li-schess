@@ -2,15 +2,7 @@
   <div class="game-area">
     <div class="loading" v-if="loading"></div>
     <div class="content" v-if="!loading">
-      <div class="chat">
-        <ul ref="chatbox">
-          <li v-for="(message, index) in chatMessages" :key="index">{{ message }}</li>
-        </ul>
-        <div class="chat-input">
-          <input v-on:keyup.enter="sendChat" v-model="chatInput" />
-          <button @click="sendChat">send</button>
-        </div>
-      </div>
+      <chat :isPlayer="isPlayer"></chat>
       <board :orientation="orientation" :isPlayer="isPlayer"></board>
       <div class="room-controls">
         <div class="player-name opponent">{{ opponentName }}</div>
@@ -39,6 +31,7 @@
 
 <script>
 import Board from '@/components/Board';
+import Chat from '@/components/Chat';
 
 const initialState = {
   gameOver: false,
@@ -55,6 +48,7 @@ export default {
   name: 'GameArea',
   components: {
     board: Board,
+    chat: Chat
   },
   props: ['roomName'],
   data() {
@@ -64,8 +58,6 @@ export default {
       blackName: "Anonymous",
       whiteId: null,
       blackid: null,
-      chatMessages: [],
-      chatInput: "",
       loading: true,
       isPlayer: false,
       ...initialState
@@ -83,7 +75,6 @@ export default {
     this.$socket.emit("joinRoom", this.roomName);
   },
   updated() {
-    this.$refs.chatbox.scrollTop = this.$refs.chatbox.scrollHeight;
     document.title = `${this.whiteName} vs ${this.blackName} - schess.org`;
   },
   methods: {
@@ -105,10 +96,6 @@ export default {
       this.rematchStatus = "initial";
       this.$socket.emit("acceptRematch");
     },
-    sendChat: function() {
-      this.$socket.emit("chatMessage", this.chatInput);
-      this.chatInput = "";
-    }
   },
   sockets: {
     startGame: function(data) {
@@ -171,9 +158,6 @@ export default {
     cancelRematch: function() {
       this.rematchStatus = "initial";
     },
-    newChatMessage: function(message) {
-      this.chatMessages.push(message);
-    }
   },
 };
 </script>
@@ -225,37 +209,6 @@ export default {
 .player-name {
   font-size: 18px;
   letter-spacing: 2px;
-}
-
-.chat {
-  display: flex;
-  flex-direction: column;
-  height: 400px;
-  width: 300px;
-  margin-right: 5px;
-  border: 1px solid darkgray;
-}
-
-.chat ul {
-  list-style: none;
-  margin: 0;
-  padding: 20px;
-  flex: 1;
-  overflow-y: scroll;
-  word-wrap: break-word;
-}
-
-.chat li {
-  padding: 3px 0;
-}
-
-.chat .chat-input {
-  display: flex;
-  flex-direction: row;
-}
-
-.chat input {
-  flex: 1;
 }
 </style>
 
