@@ -46,6 +46,7 @@ export default {
       sPieceRoles: [],
       sPieceSquare: "",
       sPieceMoveDest: "",
+      premove: null,
       game: new SChess(),
     };
   },
@@ -144,6 +145,7 @@ export default {
       }
       this.updateBoard();
       console.log("after opponent move:", this.game.pgn());
+      this.performPremove();
     },
     setPromotedPiece: function(dest, role, color) {
       console.log("setPromotedPiece:", dest, role, color);
@@ -163,9 +165,6 @@ export default {
     updateBoard: function() {
       this.updateSPieceCheckboxes();
       this.inCheck = this.game.in_check();
-      console.log("isPlayer in updateBoard:", this.isPlayer);
-      console.log("gameInProgress in updateBoard:", this.gameInProgress);
-      console.log("gameover in updateBoard:", this.game.game_over());
       this.ground.set({
         check: this.game.in_check(),
         turnColor: this.game.game_over() ? undefined : this.turn(),
@@ -235,9 +234,23 @@ export default {
       this.sPieceMoveDest = "";
       this.resetBoard();
     },
+    setPremove: function(orig, dest) {
+      this.premove = { orig, dest };
+    },
+    unsetPremove: function() {
+      this.premove = null;
+    },
+    performPremove: function() {
+      if (this.premove) {
+        const orig = this.premove[0];
+        const dest = this.premove[1];
+        this.onMove(orig, dest);
+        this.ground.playPremove();
+        this.premove = null;
+      }
+    },
     createGround: function() {
       const onMove = this.onMove;
-      console.log("isPlayer in createGround:", this.isPlayer);
       this.ground = Chessground(document.getElementById('board'), {
         drawable: {
           pieces: {
@@ -257,6 +270,12 @@ export default {
             },
           }
         },
+        premovable: {
+          events: {
+            set: this.setPremove,
+            unset: this.unsetPremove
+          }
+        }
       });
     }
   },
