@@ -9,14 +9,14 @@
 		"start": "node build/dev-server.js",
 		"server": "node server/server.js",
 		"build": "node build/build.js",
-		"unit":
-			"cross-env BABEL_ENV=test karma start test/unit/karma.conf.js --single-run",
+		"unit": "cross-env BABEL_ENV=test karma start test/unit/karma.conf.js --single-run",
 		"e2e": "node test/e2e/runner.js",
 		"test": "npm run unit && npm run e2e",
 		"lint": "eslint --ext .js,.vue src test/unit/specs test/e2e/specs"
 	},
 	"dependencies": {
 		"schess.js": "0.0.9",
+		"shortid": "^2.2.8",
 		"snabbdom": "^0.7.0",
 		"socket.io": "^2.0.3",
 		"socket.io-client": "^2.0.3",
@@ -99,5 +99,9 @@
 		"node": ">= 4.0.0",
 		"npm": ">= 3.0.0"
 	},
-	"browserslist": ["> 1%", "last 2 versions", "not ie <= 8"]
+	"browserslist": [
+		"> 1%",
+		"last 2 versions",
+		"not ie <= 8"
+	]
 }

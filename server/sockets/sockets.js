@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 const SChess = require("schess.js").SChess;
+const shortid = require("shortid");
 
 const seeks = [];
 
@@ -7,15 +8,13 @@ const rooms = [];
 
 const sockets = {};
 
-let nextRoomid = 0;
-
 let numConnections = 0;
 
 const printState = (event, ...rest) => {
 	console.log(
 		event,
 		rest.join(", "),
-		"\t\t",
+		"\t\t\t\t\t",
 		`# connections: ${numConnections}`,
 		`# seeks: ${seeks.length}`,
 		`# rooms: ${rooms.length}`,
@@ -42,7 +41,7 @@ const handleMove = (io, socket, move) => {
 			promotion: move.promotion ? move.promotion.charAt(0) : undefined
 		})
 	);
-	const roomName = room.id.toString();
+	const roomName = room.id;
 	room.currentFen = game.fen();
 	socket.to(roomName).emit("opponentMove", move);
 	emitGameListUpdate(io, room.id);
@@ -62,8 +61,8 @@ const handleDisconnect = (io, socket) => {
 	if (room) {
 		if (socket.id === room.white.id || socket.id === room.black.id) {
 			room.inPlay = false;
-			socket.to(room.id.toString()).emit("opponentDisconnected");
-			io.in(room.id.toString()).emit("pgn", room.game.pgn());
+			socket.to(room.id).emit("opponentDisconnected");
+			io.in(room.id).emit("pgn", room.game.pgn());
 		}
 	}
 	io.emit("updateNumConnections", numConnections);
@@ -93,7 +92,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 	const white = players[0];
 	const black = players[1];
 	const newRoom = {
-		id: nextRoomid++,
+		id: shortid.generate(),
 		white,
 		black,
 		players,
@@ -104,7 +103,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 	rooms.push(newRoom);
 	sockets[white.id].room = newRoom;
 	sockets[black.id].room = newRoom;
-	const roomName = newRoom.id.toString();
+	const roomName = newRoom.id;
 	white.join(roomName);
 	black.join(roomName);
 	io.in(roomName).emit("seekAccepted", roomName);
@@ -126,7 +125,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 
 const handleResign = (io, socket) => {
 	const room = sockets[socket.id].room;
-	const roomName = room.id.toString();
+	const roomName = room.id;
 	if (socket.id === room.white.id) {
 		io.in(roomName).emit("whiteResigned");
 	} else if (socket.id === room.black.id) {
@@ -143,21 +142,21 @@ const emitUpdateNumGames = io => {
 
 const handleOfferRematch = (io, socket) => {
 	const room = sockets[socket.id].room;
-	const roomName = room.id.toString();
+	const roomName = room.id;
 	room.rematchOfferedBy = socket.id;
 	socket.to(roomName).emit("offerRematch");
 };
 
 const handleCancelRematch = (io, socket) => {
 	const room = sockets[socket.id].room;
-	const roomName = room.id.toString();
+	const roomName = room.id;
 	room.rematchOfferedBy = undefined;
 	socket.to(roomName).emit("cancelRematch");
 };
 
 const handleAcceptRematch = (io, socket) => {
 	const room = sockets[socket.id].room;
-	const roomName = room.id.toString();
+	const roomName = room.id;
 	room.rematchOfferedBy = undefined;
 	room.white = room.players[1];
 	room.black = room.players[0];
@@ -183,7 +182,7 @@ const handleClearUsername = (io, socket) => {
 };
 
 const handleChatMessage = (io, socket, message) => {
-	const roomId = sockets[socket.id].room.id.toString();
+	const roomId = sockets[socket.id].room.id;
 	const username = sockets[socket.id].username;
 	console.log(`[chat ${roomId}] ${username}:`, message);
 	io.in(roomId).emit("newChatMessage", `${username}: ${message}`);
@@ -222,7 +221,7 @@ const emitGameListUpdate = (io, id) => {
 };
 
 const handleJoinRoom = (io, socket, roomName) => {
-	const room = rooms.find(room => room.id.toString() === roomName.toString());
+	const room = rooms.find(room => room.id === roomName);
 	if (!room) {
 		console.log("room not found:", roomName);
 		console.trace();
@@ -245,13 +244,13 @@ const joinRoomAsSpectator = (io, socket, roomName) => {
 	console.log("spectator joined", roomName);
 	socket.join(roomName);
 	socket.emit("joinRoomAsSpectator", roomName);
-	const room = rooms.find(room => room.id.toString() === roomName.toString());
+	const room = rooms.find(room => room.id === roomName);
 	sockets[socket.id].room = room;
 	emitFullGameUpdate(io, socket, roomName);
 };
 
 const emitFullGameUpdate = (io, socket, roomName) => {
-	const room = rooms.find(room => room.id.toString() === roomName.toString());
+	const room = rooms.find(room => room.id === roomName);
 	if (!room) {
 		console.log("room not found:", roomName);
 		console.trace();
