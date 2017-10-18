@@ -1,19 +1,18 @@
 <template>
     <div class="mini-board-wrapper">
         <div class="black">{{ black }}</div>
-        <div ref="miniBoard" class="mini-board">
+        <div ref="miniBoard" class="mini-board" @click="onBoardClick">
         </div>
         <div class="white">{{ white }}</div>
     </div>
 </template>
 
 <script>
-import SChess from 'schess.js';
 import Chessground from 'cg/dist/chessground';
 
 export default {
     name: 'BoardMini',
-    props: ['fen', 'white', 'black'],
+    props: ['fen', 'white', 'black', 'onBoardClick'],
     data() {
         return {
             ground: null,

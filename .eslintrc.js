@@ -20,26 +20,11 @@ module.exports = {
 			}
 		}
 	},
-	extends: ["prettier", "eslint:recommended", "plugin:vue/recommended"],
+	extends: ["vue", "prettier", "eslint:recommended"],
 	// add your custom rules here
 	rules: {
-		semi: 1,
-		// don't require .vue extension when importing
-		"import/extensions": [
-			"error",
-			"always",
-			{
-				js: "never",
-				vue: "never"
-			}
-		],
-		// allow optionalDependencies
-		"import/no-extraneous-dependencies": [
-			"error",
-			{
-				optionalDependencies: ["test/unit/index.js"]
-			}
-		],
+		semi: 0,
+		"no-console": 0,
 		// allow debugger during development
 		"no-debugger": process.env.NODE_ENV === "production" ? 2 : 0
 	}

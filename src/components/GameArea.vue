@@ -1,34 +1,37 @@
 <template>
   <div class="game-area">
-    <div class="chat">
-      <ul ref="chatbox">
-        <li v-for="(message, index) in chatMessages" :key="index">{{ message }}</li>
-      </ul>
-      <div class="chat-input">
-        <input v-on:keyup.enter="sendChat" v-model="chatInput" />
-        <button @click="sendChat">send</button>
+    <div class="loading" v-if="loading"></div>
+    <div class="content" v-if="!loading">
+      <div class="chat">
+        <ul ref="chatbox">
+          <li v-for="(message, index) in chatMessages" :key="index">{{ message }}</li>
+        </ul>
+        <div class="chat-input">
+          <input v-on:keyup.enter="sendChat" v-model="chatInput" />
+          <button @click="sendChat">send</button>
+        </div>
       </div>
-    </div>
-    <board :orientation="orientation"></board>
-    <div class="room-controls">
-      <div class="player-name opponent">{{ opponentName }}</div>
-      <button v-if="!gameOver" @click="resign">Resign</button>
-      <div class="rematch" v-if="gameOver">
-        <button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
-        <button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
-        <button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
+      <board :orientation="orientation" :isPlayer="isPlayer"></board>
+      <div class="room-controls">
+        <div class="player-name opponent">{{ opponentName }}</div>
+        <button v-if="isPlayer && !gameOver" @click="resign">Resign</button>
+        <div class="rematch" v-if="isPlayer && gameOver">
+          <button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
+          <button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
+          <button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
+        </div>
+        <div class="player-name me">{{ myName }}</div>
       </div>
-      <div class="player-name me">{{ myName }}</div>
-    </div>
-    <div class="status-messages">
-      <div v-if="gameOver">Game over.</div>
-      <div v-if="whiteWinsMate">Checkmate - White wins!</div>
-      <div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
-      <div v-else-if="whiteResigned">White resigned.</div>
-      <div v-else-if="blackResigned">Black resigned.</div>
-      <div v-else-if="opponentDisconnected">Opponent disconnected.</div>
-      <div v-if="pgn">
-        <textarea readonly class="pgn" v-model="pgn"></textarea>
+      <div class="status-messages">
+        <div v-if="gameOver">Game over.</div>
+        <div v-if="whiteWinsMate">Checkmate - White wins!</div>
+        <div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
+        <div v-else-if="whiteResigned">White resigned.</div>
+        <div v-else-if="blackResigned">Black resigned.</div>
+        <div v-else-if="opponentDisconnected">Opponent disconnected.</div>
+        <div v-if="pgn">
+          <textarea readonly class="pgn" v-model="pgn"></textarea>
+        </div>
       </div>
     </div>
   </div>
@@ -53,13 +56,18 @@ export default {
   components: {
     board: Board,
   },
+  props: ['roomName'],
   data() {
     return {
       orientation: 'white',
       whiteName: "Anonymous",
       blackName: "Anonymous",
+      whiteId: null,
+      blackid: null,
       chatMessages: [],
       chatInput: "",
+      loading: true,
+      isPlayer: false,
       ...initialState
     };
   },
@@ -70,6 +78,9 @@ export default {
     opponentName: function() {
       return this.orientation === "white" ? this.blackName : this.whiteName;
     },
+  },
+  mounted() {
+    this.$socket.emit("joinRoom", this.roomName);
   },
   updated() {
     this.$refs.chatbox.scrollTop = this.$refs.chatbox.scrollHeight;
@@ -107,7 +118,25 @@ export default {
       if (data) {
         this.whiteName = data.whiteName;
         this.blackName = data.blackName;
+        this.whiteId = data.whiteId;
+        this.blackId = data.blackId;
       }
+    },
+    joinRoomAsPlayer: function(data) {
+      console.log("joinRoomAsPlayer");
+      this.isPlayer = true;
+      this.loading = false;
+    },
+    joinRoomAsSpectator: function(data) {
+      console.log("joinRoomAsSpectator");
+      this.isPlayer = false;
+      this.loading = false;
+    },
+    fullGameUpdate: function(data) {
+      this.whiteName = data.whiteName;
+      this.blackName = data.blackName;
+      this.whiteId = data.whiteId;
+      this.blackid = data.blackId;
     },
     whiteWinsMate: function() {
       this.whiteWinsMate = true;
@@ -131,6 +160,7 @@ export default {
     },
     setColor: function(color) {
       this.orientation = color;
+      console.log("setColor:", color);
     },
     pgn: function(pgn) {
       this.pgn = pgn;
@@ -149,7 +179,7 @@ export default {
 </script>
 
 <style scoped>
-.game-area {
+.game-area .content {
   padding: 20px;
   display: flex;
   align-items: center;

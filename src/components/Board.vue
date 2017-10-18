@@ -7,8 +7,8 @@
     </div>
     <div id="board-wrapper">
       <div id="board"></div>
-      <promotion v-if="promoting" :orientation="orientation" :dest="promotionDest" :color="orientation" v-on:finish="finishPromotion" v-on:cancel="cancelPromotion"></promotion>
-      <sPieceSelector v-if="addingSPiece" :roles="sPieceRoles" :orientation="orientation" :dest="sPieceSquare" :color="orientation" v-on:finish="finishSPiece" v-on:cancel="cancelSPiece"></sPieceSelector>
+      <promotion v-if="isPlayer && promoting" :orientation="orientation" :dest="promotionDest" :color="orientation" v-on:finish="finishPromotion" v-on:cancel="cancelPromotion"></promotion>
+      <sPieceSelector v-if="isPlayer && addingSPiece" :roles="sPieceRoles" :orientation="orientation" :dest="sPieceSquare" :color="orientation" v-on:finish="finishSPiece" v-on:cancel="cancelSPiece"></sPieceSelector>
     </div>
     <div class="schess-buttons">
       <span :class="{ active: elephantEnabled }">elephant</span>
@@ -29,7 +29,7 @@ export default {
     promotion: Promotion,
     sPieceSelector: SPieceSelector
   },
-  props: ['orientation'],
+  props: ['orientation', 'isPlayer'],
   data() {
     return {
       inCheck: false,
@@ -38,7 +38,7 @@ export default {
       elephantOpponentEnabled: true,
       hawkOpponentEnabled: true,
       ground: null,
-      gameInProgress: false,
+      gameInProgress: true,
       promoting: false,
       promotionDest: "",
       promotionOrig: "",
@@ -46,12 +46,13 @@ export default {
       sPieceRoles: [],
       sPieceSquare: "",
       sPieceMoveDest: "",
-      game: new SChess()
+      game: new SChess(),
     };
   },
   watch: {
     orientation: function(newOrientation) {
-      this.ground.set({ orientation: newOrientation, movable: { color: newOrientation } });
+      console.log("new orientation:", newOrientation);
+      this.ground.set({ orientation: newOrientation });
     },
   },
   computed: {
@@ -162,6 +163,9 @@ export default {
     updateBoard: function() {
       this.updateSPieceCheckboxes();
       this.inCheck = this.game.in_check();
+      console.log("isPlayer in updateBoard:", this.isPlayer);
+      console.log("gameInProgress in updateBoard:", this.gameInProgress);
+      console.log("gameover in updateBoard:", this.game.game_over());
       this.ground.set({
         check: this.game.in_check(),
         turnColor: this.game.game_over() ? undefined : this.turn(),
@@ -230,28 +234,34 @@ export default {
       this.sPieceSelector = "";
       this.sPieceMoveDest = "";
       this.resetBoard();
+    },
+    createGround: function() {
+      const onMove = this.onMove;
+      console.log("isPlayer in createGround:", this.isPlayer);
+      this.ground = Chessground(document.getElementById('board'), {
+        drawable: {
+          pieces: {
+            baseUrl: '/static/images/',
+          },
+        },
+        viewOnly: !this.isPlayer,
+        resizable: true,
+        orientation: this.orientation,
+        movable: {
+          free: false,
+          color: this.orientation,
+          dests: this.legalDests(),
+          events: {
+            after(orig, dest) {
+              onMove(orig, dest);
+            },
+          }
+        },
+      });
     }
   },
   mounted() {
-    const onMove = this.onMove;
-    this.ground = Chessground(document.getElementById('board'), {
-      drawable: {
-        pieces: {
-          baseUrl: '/static/images/',
-        },
-      },
-      resizable: true,
-      movable: {
-        free: false,
-        color: undefined,
-        dests: this.legalDests(),
-        events: {
-          after(orig, dest) {
-            onMove(orig, dest);
-          },
-        }
-      },
-    });
+    this.createGround();
   },
   sockets: {
     connect: function() {
@@ -268,6 +278,13 @@ export default {
       console.log("got opponent move:", move);
       this.onOpponentMove(move);
     },
+    fullGameUpdate: function(data) {
+      console.log("fullGameUpdate:", data);
+      this.gameInProgress = true;
+      this.game = new SChess(data.currentFen);
+      this.resetBoard();
+      this.updateBoard();
+    }
   },
 };
 </script>

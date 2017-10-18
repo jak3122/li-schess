@@ -20,7 +20,8 @@
       </table>
     </div>
     <div class="game-list">
-      <miniBoard v-for="game in gameList" :key="game.id" :fen="game.fen" :white="game.white" :black="game.black"></miniBoard>
+      <miniBoard v-for="game in gameList" :key="game.id" :fen="game.fen" :white="game.white" :black="game.black" :onBoardClick="spectateGame(game.id)">
+      </miniBoard>
     </div>
   </div>
 </template>
@@ -65,6 +66,12 @@ export default {
     cancelSeek: function() {
       this.currentlySeeking = false;
       this.$socket.emit("cancelSeek");
+    },
+    spectateGame: function(roomName) {
+      return function() {
+        this.$socket.emit("spectatorJoin", roomName);
+        this.$router.push({ name: 'game', params: { roomName } });
+      }.bind(this);
     }
   },
 
@@ -72,9 +79,9 @@ export default {
     newSeek: function(seek) {
       this.seeks.push(seek);
     },
-    seekAccepted: function() {
+    seekAccepted: function(roomName) {
       this.currentlySeeking = false;
-      this.$router.push('game');
+      this.$router.push({ name: 'game', params: { roomName } });
     },
     removeSeek: function(id) {
       const index = this.seeks.findIndex(seek => seek.id === id);
