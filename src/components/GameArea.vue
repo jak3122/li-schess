@@ -77,6 +77,9 @@ export default {
   updated() {
     document.title = `${this.whiteName} vs ${this.blackName} - schess.org`;
   },
+  beforeDestroy() {
+    this.$socket.emit("leaveRoom", this.roomName);
+  },
   methods: {
     flipBoard: function() {
       this.orientation === "white" ? this.orientation = "black" : this.orientation = "white";

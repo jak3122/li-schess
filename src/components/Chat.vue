@@ -22,6 +22,7 @@
                 <button @click="sendGameChat">send</button>
             </div>
         </div>
+        <div class="spectators" v-show="numSpectators > 0">{{numSpectators}} Spectators: {{ spectatorNames }}</div>
     </div>
 </template>
 
@@ -36,6 +37,15 @@ export default {
             gameChatMessages: [],
             spectatorChatInput: "",
             gameChatInput: "",
+            spectators: []
+        }
+    },
+    computed: {
+        spectatorNames: function() {
+            return this.spectators.join(", ");
+        },
+        numSpectators: function() {
+            return this.spectators.length;
         }
     },
     updated() {
@@ -66,12 +76,26 @@ export default {
         },
         newGameChatMessage: function(message) {
             this.gameChatMessages.push(message);
+        },
+        spectators: function(newSpectators) {
+            this.spectators = newSpectators;
+        },
+        fullGameUpdate: function(data) {
+            console.log("fullGameUpdate:", data);
+            if (data && data.spectators) {
+                this.spectators = data.spectators;
+            }
         }
     }
 }
 </script>
 
 <style scoped>
+.chats {
+    margin-right: 15px;
+    width: 300px;
+}
+
 .chat-select {
     display: flex;
 }
@@ -98,7 +122,7 @@ export default {
     display: flex;
     flex-direction: column;
     height: 400px;
-    width: 300px;
+    width: 100%;
     margin-right: 5px;
     border: 1px solid darkgray;
 }
@@ -123,5 +147,10 @@ export default {
 
 .chat input {
     flex: 1;
+}
+
+.spectators {
+    margin-top: 10px;
+    position: absolute;
 }
 </style>

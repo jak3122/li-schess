@@ -25,6 +25,21 @@ const printState = (event, ...rest) => {
 	);
 };
 
+const getSpectators = room => {
+	return room.spectators.map(specSocket => {
+		const specName = sockets[specSocket.id].username;
+		return specName;
+	});
+};
+
+const removeSpectator = (room, socket) => {
+	const index = room.spectators.findIndex(s => s.id === socket.id);
+	if (index !== -1) {
+		room.spectators.splice(index, 1);
+		socket.to(room.id).emit("spectators", getSpectators(room));
+	}
+};
+
 const handleConnect = (io, socket) => {
 	console.log("A client just joined on", socket.id);
 	sockets[socket.id] = { username: "Anonymous", socket };
@@ -63,6 +78,8 @@ const handleDisconnect = (io, socket) => {
 			room.inPlay = false;
 			socket.to(room.id).emit("opponentDisconnected");
 			io.in(room.id).emit("pgn", room.game.pgn());
+		} else {
+			removeSpectator(room, socket);
 		}
 	}
 	io.emit("updateNumConnections", numConnections);
@@ -98,7 +115,8 @@ const handleAcceptSeek = (io, socket, seek) => {
 		players,
 		game: new SChess(),
 		currentFen: new SChess().fen(),
-		inPlay: true
+		inPlay: true,
+		spectators: []
 	};
 	rooms.push(newRoom);
 	sockets[white.id].room = newRoom;
@@ -252,8 +270,15 @@ const joinRoomAsSpectator = (io, socket, roomName) => {
 	socket.join(roomName);
 	socket.emit("joinRoomAsSpectator", roomName);
 	const room = rooms.find(room => room.id === roomName);
+	if (!room) {
+		console.log("room not found:", roomName);
+		console.trace();
+		return;
+	}
+	room.spectators.push(socket);
 	sockets[socket.id].room = room;
 	emitFullGameUpdate(io, socket, roomName);
+	socket.to(room.id).emit("spectators", getSpectators(room));
 };
 
 const emitFullGameUpdate = (io, socket, roomName) => {
@@ -265,15 +290,28 @@ const emitFullGameUpdate = (io, socket, roomName) => {
 	}
 	const whiteName = sockets[room.white.id].username;
 	const blackName = sockets[room.black.id].username;
+	const spectators = getSpectators(room);
+	console.log("fullGameUpdate spectators:", spectators);
 	const roomUpdate = {
 		id: room.id,
 		whiteName,
 		whiteId: room.white.id,
 		blackName,
 		blackId: room.black.id,
-		currentFen: room.currentFen
+		currentFen: room.currentFen,
+		spectators
 	};
 	socket.emit("fullGameUpdate", roomUpdate);
+};
+
+const handleLeaveRoom = (io, socket, roomName) => {
+	const room = rooms.find(room => room.id === roomName);
+	if (!room) {
+		console.log("room not found:", roomName);
+		console.trace();
+		return;
+	}
+	removeSpectator(room, socket);
 };
 
 module.exports.socketServer = io => {
@@ -352,6 +390,11 @@ module.exports.socketServer = io => {
 		socket.on("joinRoom", roomName => {
 			handleJoinRoom(io, socket, roomName);
 			printState("joinRoom");
+		});
+
+		socket.on("leaveRoom", roomName => {
+			handleLeaveRoom(io, socket, roomName);
+			printState("leaveRoom");
 		});
 	});
 };
