@@ -1,4 +1,4 @@
-# li-schess
+# schess.org
 
 > S-Chess built with the lichess chessground UI
 

@@ -2,7 +2,7 @@
   <div id="app">
     <div class="header">
       <div class="title">
-        <router-link to="/">li-schess</router-link>
+        <router-link to="/">schess.org</router-link>
       </div>
       <div class="stats">
         <div>{{ numConnectionsText }}</div>
