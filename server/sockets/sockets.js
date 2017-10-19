@@ -131,7 +131,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 	const blackName = sockets[black.id].username;
 	const whiteId = white.id;
 	const blackId = black.id;
-	console.log("startGame", whiteName, blackName);
+	console.log("startGame", roomName, whiteName, blackName);
 	io
 		.in(roomName)
 		.emit("startGame", { whiteName, blackName, whiteId, blackId });
@@ -160,9 +160,11 @@ const emitUpdateNumGames = io => {
 
 const handleOfferRematch = (io, socket) => {
 	const room = sockets[socket.id].room;
-	const roomName = room.id;
-	room.rematchOfferedBy = socket.id;
-	socket.to(roomName).emit("offerRematch");
+	if (room) {
+		const roomName = room.id;
+		room.rematchOfferedBy = socket.id;
+		socket.to(roomName).emit("offerRematch");
+	}
 };
 
 const handleCancelRematch = (io, socket) => {
@@ -200,17 +202,26 @@ const handleClearUsername = (io, socket) => {
 };
 
 const handleSpectatorChatMessage = (io, socket, message) => {
-	const roomId = sockets[socket.id].room.id;
-	const username = sockets[socket.id].username;
-	console.log(`[(s)chat ${roomId}] ${username}:`, message);
-	io.in(roomId).emit("newSpectatorChatMessage", `${username}: ${message}`);
+	try {
+		const roomId = sockets[socket.id].room.id;
+		const username = sockets[socket.id].username;
+		console.log(`[(s)chat ${roomId}] ${username}:`, message);
+		io.in(roomId).emit("newSpectatorChatMessage", `${username}: ${message}`);
+	} catch (err) {
+		console.trace(`handleSpectatorChatMessage ${socket.id} ${message} failed:`, err);
+	}
+
 };
 
 const handleGameChatMessage = (io, socket, message) => {
-	const roomId = sockets[socket.id].room.id;
-	const username = sockets[socket.id].username;
-	console.log(`[(g)chat ${roomId}] ${username}:`, message);
-	io.in(roomId).emit("newGameChatMessage", `${username}: ${message}`);
+	try {
+		const roomId = sockets[socket.id].room.id;
+		const username = sockets[socket.id].username;
+		console.log(`[(g)chat ${roomId}] ${username}:`, message);
+		io.in(roomId).emit("newGameChatMessage", `${username}: ${message}`);
+	} catch (err) {
+		console.trace(`handleGameChatMessage ${socket.id} ${message} failed:`, err);
+	}
 };
 
 const handleJoinedLobby = (io, socket) => {
@@ -291,7 +302,7 @@ const emitFullGameUpdate = (io, socket, roomName) => {
 	const whiteName = sockets[room.white.id].username;
 	const blackName = sockets[room.black.id].username;
 	const spectators = getSpectators(room);
-	console.log("fullGameUpdate spectators:", spectators);
+	console.log(`fullGameUpdate room.id: ${room.id}, fen: ${room.currentFen}`);
 	const roomUpdate = {
 		id: room.id,
 		whiteName,
