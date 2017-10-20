@@ -255,75 +255,82 @@ const handleJoinedLobby = (io, socket) => {
 };
 
 const emitGameListUpdate = (io, id) => {
-	const room = rooms.find(room => room.id === id);
-	const white = sockets[room.white.id];
-	const black = sockets[room.black.id];
-	const update = {
-		id,
-		fen: room.currentFen,
-		white: white ? white.username : undefined,
-		black: black ? black.username : undefined
-	};
-	io.in("lobby").emit("gameListUpdate", update);
+	try {
+		const room = rooms.find(room => room.id === id);
+		const white = sockets[room.white.id];
+		const black = sockets[room.black.id];
+		const update = {
+			id,
+			fen: room.currentFen,
+			white: white ? white.username : undefined,
+			black: black ? black.username : undefined
+		};
+		io.in("lobby").emit("gameListUpdate", update);
+	} catch (err) {
+		console.trace(`id: ${id}`);
+	}
 };
 
 const handleJoinRoom = (io, socket, roomName) => {
-	const room = rooms.find(room => room.id === roomName);
-	if (!room) {
-		console.log("room not found:", roomName);
-		console.trace();
-		return;
-	}
-	if (socket.id === room.white.id || socket.id === room.black.id) {
-		joinRoomAsPlayer(io, socket, roomName);
-	} else {
-		joinRoomAsSpectator(io, socket, roomName);
+	try {
+		const room = rooms.find(room => room.id === roomName);
+		if (socket.id === room.white.id || socket.id === room.black.id) {
+			joinRoomAsPlayer(io, socket, roomName);
+		} else {
+			joinRoomAsSpectator(io, socket, roomName);
+		}
+	} catch (err) {
+		console.trace(`roomName: ${roomName}`);
 	}
 };
 
 const joinRoomAsPlayer = (io, socket, roomName) => {
-	console.log("player joined", roomName);
-	socket.join(roomName);
-	socket.emit("joinRoomAsPlayer", roomName);
+	try {
+		console.log("player joined", roomName);
+		socket.join(roomName);
+		socket.emit("joinRoomAsPlayer", roomName);
+	} catch (err) {
+		console.trace(`roomName: ${roomName}`);
+	}
 };
 
 const joinRoomAsSpectator = (io, socket, roomName) => {
-	console.log("spectator joined", roomName);
-	socket.join(roomName);
-	socket.emit("joinRoomAsSpectator", roomName);
-	const room = rooms.find(room => room.id === roomName);
-	if (!room) {
-		console.log("room not found:", roomName);
-		console.trace();
-		return;
+	try {
+		console.log("spectator joined", roomName);
+		socket.join(roomName);
+		socket.emit("joinRoomAsSpectator", roomName);
+		const room = rooms.find(room => room.id === roomName);
+		room.spectators.push(socket);
+		sockets[socket.id].room = room;
+		emitFullGameUpdate(io, socket, roomName);
+		socket.to(room.id).emit("spectators", getSpectators(room));
+	} catch (err) {
+		console.trace(`roomName: ${roomName}`);
 	}
-	room.spectators.push(socket);
-	sockets[socket.id].room = room;
-	emitFullGameUpdate(io, socket, roomName);
-	socket.to(room.id).emit("spectators", getSpectators(room));
 };
 
 const emitFullGameUpdate = (io, socket, roomName) => {
-	const room = rooms.find(room => room.id === roomName);
-	if (!room) {
-		console.log("room not found:", roomName);
-		console.trace();
-		return;
+	try {
+		const room = rooms.find(room => room.id === roomName);
+		const whiteName = sockets[room.white.id].username;
+		const blackName = sockets[room.black.id].username;
+		const spectators = getSpectators(room);
+		console.log(
+			`fullGameUpdate room.id: ${room.id}, fen: ${room.currentFen}`
+		);
+		const roomUpdate = {
+			id: room.id,
+			whiteName,
+			whiteId: room.white.id,
+			blackName,
+			blackId: room.black.id,
+			currentFen: room.currentFen,
+			spectators
+		};
+		socket.emit("fullGameUpdate", roomUpdate);
+	} catch (err) {
+		console.trace(`roomName: ${roomName}`);
 	}
-	const whiteName = sockets[room.white.id].username;
-	const blackName = sockets[room.black.id].username;
-	const spectators = getSpectators(room);
-	console.log(`fullGameUpdate room.id: ${room.id}, fen: ${room.currentFen}`);
-	const roomUpdate = {
-		id: room.id,
-		whiteName,
-		whiteId: room.white.id,
-		blackName,
-		blackId: room.black.id,
-		currentFen: room.currentFen,
-		spectators
-	};
-	socket.emit("fullGameUpdate", roomUpdate);
 };
 
 const handleLeaveRoom = (io, socket, roomName) => {
