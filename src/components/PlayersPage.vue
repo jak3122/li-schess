@@ -1,6 +1,6 @@
 <template>
     <div class="players">
-        <h2>Online Players <img class="refresh-button" src="static/loading.svg"/></h2>
+        <h2>Online Players <img @click="loadPlayers" class="refresh-button" src="static/loading.svg"/></h2>
         <div v-if="loading" class="loading"><img src="static/loading.svg" /></div>
         <ul v-if="!loading">
             <li v-for="player in players" :key="player.id">{{ player.username }}</li>
@@ -55,6 +55,9 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+}
+.players ul {
+	width: 100px;
 }
 .refresh-button {
 	cursor: pointer;
