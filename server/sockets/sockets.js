@@ -82,6 +82,10 @@ const handleDisconnect = (io, socket) => {
 			removeSpectator(room, socket);
 		}
 	}
+	if (sockets[socket.id]) {
+		delete sockets[socket.id];
+	}
+	console.log("sockets after disconnect:", Object.keys(sockets).length);
 	io.emit("updateNumConnections", numConnections);
 	emitUpdateNumGames(io);
 };
@@ -206,11 +210,15 @@ const handleSpectatorChatMessage = (io, socket, message) => {
 		const roomId = sockets[socket.id].room.id;
 		const username = sockets[socket.id].username;
 		console.log(`[(s)chat ${roomId}] ${username}:`, message);
-		io.in(roomId).emit("newSpectatorChatMessage", `${username}: ${message}`);
+		io
+			.in(roomId)
+			.emit("newSpectatorChatMessage", `${username}: ${message}`);
 	} catch (err) {
-		console.trace(`handleSpectatorChatMessage ${socket.id} ${message} failed:`, err);
+		console.trace(
+			`handleSpectatorChatMessage ${socket.id} ${message} failed:`,
+			err
+		);
 	}
-
 };
 
 const handleGameChatMessage = (io, socket, message) => {
@@ -220,7 +228,10 @@ const handleGameChatMessage = (io, socket, message) => {
 		console.log(`[(g)chat ${roomId}] ${username}:`, message);
 		io.in(roomId).emit("newGameChatMessage", `${username}: ${message}`);
 	} catch (err) {
-		console.trace(`handleGameChatMessage ${socket.id} ${message} failed:`, err);
+		console.trace(
+			`handleGameChatMessage ${socket.id} ${message} failed:`,
+			err
+		);
 	}
 };
 
@@ -325,6 +336,20 @@ const handleLeaveRoom = (io, socket, roomName) => {
 	removeSpectator(room, socket);
 };
 
+const handleRequestPlayersList = (io, socket) => {
+	try {
+		const socketIds = Object.keys(sockets);
+		const playersList = socketIds.map(id => ({
+			id,
+			username: sockets[id].username
+		}));
+		console.log("player list:", playersList);
+		socket.emit("fullPlayersList", playersList);
+	} catch (err) {
+		console.trace();
+	}
+};
+
 module.exports.socketServer = io => {
 	io.on("connection", socket => {
 		handleConnect(io, socket);
@@ -406,6 +431,10 @@ module.exports.socketServer = io => {
 		socket.on("leaveRoom", roomName => {
 			handleLeaveRoom(io, socket, roomName);
 			printState("leaveRoom");
+		});
+
+		socket.on("requestPlayersList", () => {
+			handleRequestPlayersList(io, socket);
 		});
 	});
 };
