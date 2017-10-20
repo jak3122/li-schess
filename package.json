@@ -15,7 +15,7 @@
 		"lint": "eslint --ext .js,.vue src test/unit/specs test/e2e/specs"
 	},
 	"dependencies": {
-		"schess.js": "0.0.9",
+		"schess.js": "^0.0.12",
 		"shortid": "^2.2.8",
 		"snabbdom": "^0.7.0",
 		"socket.io": "^2.0.3",

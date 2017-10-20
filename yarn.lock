@@ -5648,9 +5648,9 @@ schema-utils@^0.3.0:
   dependencies:
     ajv "^5.0.0"
 
-schess.js@0.0.9:
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/schess.js/-/schess.js-0.0.9.tgz#f0c4ac8e1935f1300822dad8edcee150ffab41df"
+schess.js@^0.0.12:
+  version "0.0.12"
+  resolved "https://registry.yarnpkg.com/schess.js/-/schess.js-0.0.12.tgz#d1bd86f73d75bb0a6decd574899db7342ba5dd2e"
 
 selenium-server@^3.0.1:
   version "3.6.0"
