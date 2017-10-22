@@ -7,8 +7,8 @@
     </div>
     <div id="board-wrapper">
       <div id="board"></div>
-      <promotion v-show="isPlayer && promoting" :orientation="orientation" :dest="promotionDest" :color="orientation" v-on:finish="finishPromotion" v-on:cancel="cancelPromotion"></promotion>
-      <sPieceSelector v-show="isPlayer && addingSPiece" :roles="sPieceRoles" :orientation="orientation" :dest="sPieceSquare" :color="orientation" :rookSquare="sPieceRookSquare" v-on:finish="finishSPiece" v-on:cancel="cancelSPiece"></sPieceSelector>
+      <promotion v-show="isPlayer && promoting" :key="isPlayer && promoting" :orientation="orientation" :dest="promotionDest" :color="orientation" v-on:finish="finishPromotion" v-on:cancel="cancelPromotion"></promotion>
+      <sPieceSelector v-show="isPlayer && addingSPiece" :key="isPlayer && addingSPiece" :roles="sPieceRoles" :orientation="orientation" :dest="sPieceSquare" :color="orientation" :rookSquare="sPieceRookSquare" v-on:finish="finishSPiece" v-on:cancel="cancelSPiece"></sPieceSelector>
     </div>
     <div class="schess-buttons">
       <span :class="{ active: elephantEnabled }">elephant</span>
