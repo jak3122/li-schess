@@ -418,7 +418,7 @@ module.exports.socketServer = io => {
 
 		socket.on("setUsername", name => {
 			handleSetUsername(io, socket, name);
-			printState("setUsername");
+			printState("setUsername", name);
 		});
 
 		socket.on("clearUsername", () => {
