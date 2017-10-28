@@ -383,7 +383,11 @@ module.exports.socketServer = io => {
 		});
 
 		socket.on("acceptSeek", seek => {
-			handleAcceptSeek(io, socket, seek);
+			try {
+				handleAcceptSeek(io, socket, seek);
+			} catch (err) {
+				console.trace("handleAcceptSeek", err);
+			}
 			printState("acceptSeek");
 		});
 
