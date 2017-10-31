@@ -26,6 +26,7 @@
       <table class="seek-list">
         <tr v-for="seek in seeks" @click="acceptSeek(seek)" :key="seek.id">
           <td class="username">{{ seek.username }}</td>
+					<td class="timeControl">{{ seek.timeControl.base }}+{{ seek.timeControl.increment }}</td>
         </tr>
       </table>
     </div>
@@ -63,10 +64,10 @@ export default {
 		document.title = "schess.org";
 		this.timeControls = ["1/4", "1/2"];
 		this.timeControls = this.timeControls.concat(
-			[...Array(20).keys()].map(n => n.toString())
+			[...Array(20).keys()].map(n => (n + 1).toString())
 		);
 		this.timeControls.concat(["25", "30", "45", "60"]);
-		this.timeIncrements = [...Array(20).keys()].map(n => n.toString());
+		this.timeIncrements = [...Array(21).keys()].map(n => n.toString());
 	},
 
 	beforeDestroy() {
@@ -77,7 +78,7 @@ export default {
 		newSeek: function() {
 			this.currentlySeeking = true;
 			const base = this.timeBase || "5";
-			const increment = this.timeIncrement || "2";
+			const increment = this.timeIncrement || "0";
 			this.$socket.emit("newSeek", {
 				timeControl: { base, increment }
 			});
