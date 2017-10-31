@@ -28,129 +28,128 @@
 
 <script>
 export default {
-    name: 'Chat',
-    props: ['isPlayer'],
-    data() {
-        return {
-            selectedChat: this.isPlayer ? "game" : "spectator",
-            spectatorChatMessages: [],
-            gameChatMessages: [],
-            spectatorChatInput: "",
-            gameChatInput: "",
-            spectators: []
-        }
-    },
-    computed: {
-        spectatorNames: function() {
-            return this.spectators.join(", ");
-        },
-        numSpectators: function() {
-            return this.spectators.length;
-        }
-    },
-    updated() {
-        if (this.selectedChat === "spectator")
-            this.$refs.spectatorChatbox.scrollTop = this.$refs.spectatorChatbox.scrollHeight;
-        else if (this.selectedChat === "game")
-            this.$refs.gameChatbox.scrollTop = this.$refs.gameChatbox.scrollHeight;
-    },
-    methods: {
-        sendSpectatorChat: function() {
-            this.$socket.emit("spectatorChatMessage", this.spectatorChatInput);
-            this.spectatorChatInput = "";
-        },
-        sendGameChat: function() {
-            this.$socket.emit("gameChatMessage", this.gameChatInput);
-            this.gameChatInput = "";
-        },
-        selectSpectatorChat: function() {
-            this.selectedChat = "spectator";
-        },
-        selectGameChat: function() {
-            this.selectedChat = "game";
-        }
-    },
-    sockets: {
-        newSpectatorChatMessage: function(message) {
-            this.spectatorChatMessages.push(message);
-        },
-        newGameChatMessage: function(message) {
-            this.gameChatMessages.push(message);
-        },
-        spectators: function(newSpectators) {
-            this.spectators = newSpectators;
-        },
-        fullGameUpdate: function(data) {
-            console.log("fullGameUpdate:", data);
-            if (data && data.spectators) {
-                this.spectators = data.spectators;
-            }
-        }
-    }
-}
+	name: "Chat",
+	props: ["isPlayer"],
+	data() {
+		return {
+			selectedChat: this.isPlayer ? "game" : "spectator",
+			spectatorChatMessages: [],
+			gameChatMessages: [],
+			spectatorChatInput: "",
+			gameChatInput: "",
+			spectators: []
+		};
+	},
+	computed: {
+		spectatorNames: function() {
+			return this.spectators.join(", ");
+		},
+		numSpectators: function() {
+			return this.spectators.length;
+		}
+	},
+	updated() {
+		if (this.selectedChat === "spectator")
+			this.$refs.spectatorChatbox.scrollTop = this.$refs.spectatorChatbox.scrollHeight;
+		else if (this.selectedChat === "game")
+			this.$refs.gameChatbox.scrollTop = this.$refs.gameChatbox.scrollHeight;
+	},
+	methods: {
+		sendSpectatorChat: function() {
+			this.$socket.emit("spectatorChatMessage", this.spectatorChatInput);
+			this.spectatorChatInput = "";
+		},
+		sendGameChat: function() {
+			this.$socket.emit("gameChatMessage", this.gameChatInput);
+			this.gameChatInput = "";
+		},
+		selectSpectatorChat: function() {
+			this.selectedChat = "spectator";
+		},
+		selectGameChat: function() {
+			this.selectedChat = "game";
+		}
+	},
+	sockets: {
+		newSpectatorChatMessage: function(message) {
+			this.spectatorChatMessages.push(message);
+		},
+		newGameChatMessage: function(message) {
+			this.gameChatMessages.push(message);
+		},
+		spectators: function(newSpectators) {
+			this.spectators = newSpectators;
+		},
+		fullGameUpdate: function(data) {
+			if (data && data.spectators) {
+				this.spectators = data.spectators;
+			}
+		}
+	}
+};
 </script>
 
 <style scoped>
 .chats {
-    margin-right: 15px;
-    width: 300px;
+	margin-right: 15px;
+	width: 300px;
 }
 
 .chat-select {
-    display: flex;
+	display: flex;
 }
 
 .chat-select button {
-    flex: 1;
+	flex: 1;
 }
 
 .chat-select button:focus {
-    background: #e0e0e0;
-    outline: none;
-    box-shadow: inset 0px 0px 4px #ccc;
+	background: #e0e0e0;
+	outline: none;
+	box-shadow: inset 0px 0px 4px #ccc;
 }
 
 .chat-select button.active {
-    background: #ededed;
-    border: 1px solid #ccc;
-    box-shadow: 1px 1px 2px #ccc;
-    border-radius: 3px;
-    font-weight: bold;
+	background: #ededed;
+	border: 1px solid #ccc;
+	box-shadow: 1px 1px 2px #ccc;
+	border-radius: 3px;
+	font-weight: bold;
 }
 
 .chat {
-    display: flex;
-    flex-direction: column;
-    height: 400px;
-    width: 100%;
-    margin-right: 5px;
-    border: 1px solid darkgray;
+	display: flex;
+	flex-direction: column;
+	height: 400px;
+	width: 100%;
+	margin-right: 5px;
+	border: 1px solid darkgray;
 }
 
 .chat ul {
-    list-style: none;
-    margin: 0;
-    padding: 20px;
-    flex: 1;
-    overflow-y: scroll;
-    word-wrap: break-word;
+	list-style: none;
+	margin: 0;
+	padding: 20px;
+	flex: 1;
+	overflow-y: scroll;
+	word-wrap: break-word;
 }
 
 .chat li {
-    padding: 3px 0;
+	padding: 3px 0;
 }
 
 .chat .chat-input {
-    display: flex;
-    flex-direction: row;
+	display: flex;
+	flex-direction: row;
 }
 
 .chat input {
-    flex: 1;
+	flex: 1;
 }
 
 .spectators {
-    margin-top: 10px;
-    position: absolute;
+	margin-top: 10px;
+	position: absolute;
 }
 </style>

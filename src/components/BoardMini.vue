@@ -8,49 +8,48 @@
 </template>
 
 <script>
-import Chessground from 'cg/dist/chessground';
+import Chessground from "cg/dist/chessground";
 
 export default {
-    name: 'BoardMini',
-    props: ['fen', 'white', 'black', 'onBoardClick'],
-    data() {
-        return {
-            ground: null,
-        }
-    },
-    mounted() {
-        this.ground = Chessground(this.$refs.miniBoard, {
-            drawable: {
-                pieces: {
-                    baseUrl: '/static/images/',
-                },
-            },
-            fen: this.fen,
-            coordinates: false,
-            viewOnly: true,
-            resizable: false,
-        });
-    },
-    watch: {
-        fen: function(newFen) {
-            console.log("new fen:", newFen);
-            this.ground.set({ fen: newFen });
-        }
-    }
-}
+	name: "BoardMini",
+	props: ["fen", "white", "black", "onBoardClick"],
+	data() {
+		return {
+			ground: null
+		};
+	},
+	mounted() {
+		this.ground = Chessground(this.$refs.miniBoard, {
+			drawable: {
+				pieces: {
+					baseUrl: "/static/images/"
+				}
+			},
+			fen: this.fen,
+			coordinates: false,
+			viewOnly: true,
+			resizable: false
+		});
+	},
+	watch: {
+		fen: function(newFen) {
+			this.ground.set({ fen: newFen });
+		}
+	}
+};
 </script>
 
 <style scoped>
 .mini-board-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
 }
 
 .mini-board {
-    width: 300px;
-    height: 300px;
+	width: 300px;
+	height: 300px;
 }
 </style>
     

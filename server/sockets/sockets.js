@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 const SChess = require("schess.js").SChess;
 const shortid = require("shortid");
+const clock = require("../../src/chess/clock").clock;
 
 const seeks = [];
 
@@ -9,6 +10,17 @@ const rooms = [];
 const sockets = {};
 
 let numConnections = 0;
+
+const timeControlBaseStringToMillis = minString => {
+	switch (minString) {
+		case "1/4":
+			return 15000;
+		case "1/2":
+			return 30000;
+		default:
+			return Number(minString) * 60000;
+	}
+};
 
 const printState = (event, ...rest) => {
 	console.log(
@@ -51,14 +63,30 @@ const handleMove = (io, socket, move) => {
 	console.log("got move:", move);
 	const room = sockets[socket.id].room;
 	const game = room.game;
+	const moveColor = game.turn();
 	game.move(
 		Object.assign({}, move, {
 			promotion: move.promotion ? move.promotion.charAt(0) : undefined
 		})
 	);
+	const plies = game.history({ verbose: true }).length;
+	if (plies > 1) {
+		if (moveColor === "w") {
+			room.whiteClock.pause();
+			room.whiteTime = room.whiteClock.timeLeft();
+			room.blackClock.start(room.blackTime);
+			console.log("white timeLeft:", room.whiteTime);
+		} else if (moveColor === "b") {
+			room.blackClock.pause();
+			room.blackTime = room.blackClock.timeLeft();
+			room.whiteClock.start(room.whiteTime);
+			console.log("black timeLeft:", room.blackTime);
+		}
+	}
 	const roomName = room.id;
 	room.currentFen = game.fen();
 	socket.to(roomName).emit("opponentMove", move);
+	emitUpdateTimes(io, room);
 	emitGameListUpdate(io, room.id);
 	if (game.in_checkmate()) {
 		if (game.turn() === "b") io.in(roomName).emit("whiteWinsMate");
@@ -67,6 +95,18 @@ const handleMove = (io, socket, move) => {
 		emitUpdateNumGames(io);
 		io.in(roomName).emit("pgn", game.pgn());
 	}
+	const nextColor = moveColor === "w" ? "b" : "w";
+	console.log("nextColor:", nextColor);
+	console.log("plies:", plies);
+	if (game.game_over()) {
+		stopGame(room);
+	}
+};
+
+const emitUpdateTimes = (io, room) => {
+	const times = { whiteTime: room.whiteTime, blackTime: room.blackTime };
+	console.log("updateTimes:", times);
+	io.to(room.id).emit("updateTimes", times);
 };
 
 const handleDisconnect = (io, socket) => {
@@ -90,12 +130,19 @@ const handleDisconnect = (io, socket) => {
 	emitUpdateNumGames(io);
 };
 
-const handleNewSeek = (io, socket) => {
+const stopGame = room => {
+	room.inPlay = false;
+	if (room.whiteClock) room.whiteClock.pause();
+	if (room.blackClock) room.blackClock.pause();
+};
+
+const handleNewSeek = (io, socket, data) => {
+	const { timeControl } = data;
 	const seek = {
 		username: sockets[socket.id].username,
-		id: socket.id
+		id: socket.id,
+		timeControl
 	};
-
 	seeks.push(seek);
 	io.to("lobby").emit("newSeek", seek);
 };
@@ -112,6 +159,10 @@ const handleAcceptSeek = (io, socket, seek) => {
 		Math.random() > 0.5 ? [socket, otherPlayer] : [otherPlayer, socket];
 	const white = players[0];
 	const black = players[1];
+	seek.timeControl.base = timeControlBaseStringToMillis(
+		seek.timeControl.base
+	);
+	seek.timeControl.increment = Number(seek.timeControl.increment);
 	const newRoom = {
 		id: shortid.generate(),
 		white,
@@ -120,8 +171,17 @@ const handleAcceptSeek = (io, socket, seek) => {
 		game: new SChess(),
 		currentFen: new SChess().fen(),
 		inPlay: true,
-		spectators: []
+		spectators: [],
+		timeControl: seek.timeControl,
+		whiteTime: seek.timeControl.base,
+		blackTime: seek.timeControl.base,
+		whiteClock: new clock(seek.timeControl.base),
+		blackClock: new clock(seek.timeControl.base)
 	};
+	const whiteFlagCallback = () => handleFlag(io, socket, newRoom, "white");
+	const blackFlagCallback = () => handleFlag(io, socket, newRoom, "black");
+	newRoom.whiteClock.onTimeUp(whiteFlagCallback);
+	newRoom.blackClock.onTimeUp(blackFlagCallback);
 	rooms.push(newRoom);
 	sockets[white.id].room = newRoom;
 	sockets[black.id].room = newRoom;
@@ -147,6 +207,7 @@ const handleAcceptSeek = (io, socket, seek) => {
 
 const handleResign = (io, socket) => {
 	const room = sockets[socket.id].room;
+	stopGame(room);
 	const roomName = room.id;
 	if (socket.id === room.white.id) {
 		io.in(roomName).emit("whiteResigned");
@@ -156,6 +217,15 @@ const handleResign = (io, socket) => {
 	room.inPlay = false;
 	emitUpdateNumGames(io);
 	io.in(roomName).emit("pgn", room.game.pgn());
+};
+
+const handleFlag = (io, socket, room, color) => {
+	console.log(color, "flagged");
+	stopGame(room);
+	room.whiteTime = room.whiteClock.timeLeft();
+	room.blackTime = room.blackClock.timeLeft();
+	emitUpdateTimes(io, room);
+	io.to(room.id).emit("playerFlagged", { color });
 };
 
 const emitUpdateNumGames = io => {
@@ -189,6 +259,14 @@ const handleAcceptRematch = (io, socket) => {
 	room.inPlay = true;
 	room.white.emit("setColor", "white");
 	room.black.emit("setColor", "black");
+	room.whiteTime = room.timeControl.base;
+	room.blackTime = room.timeControl.base;
+	room.whiteClock = new clock(room.timeControl.base);
+	room.blackClock = new clock(room.timeControl.base);
+	const whiteFlagCallback = () => handleFlag(io, socket, room, "white");
+	const blackFlagCallback = () => handleFlag(io, socket, room, "black");
+	room.whiteClock.onTimeUp(whiteFlagCallback);
+	room.blackClock.onTimeUp(blackFlagCallback);
 	const whiteName = sockets[room.white.id].username;
 	const blackName = sockets[room.black.id].username;
 	io.in(roomName).emit("startGame", { whiteName, blackName });
@@ -325,7 +403,9 @@ const emitFullGameUpdate = (io, socket, roomName) => {
 			blackName,
 			blackId: room.black.id,
 			currentFen: room.currentFen,
-			spectators
+			spectators,
+			whiteTime: room.whiteTime,
+			blackTime: room.blackTime
 		};
 		socket.emit("fullGameUpdate", roomUpdate);
 	} catch (err) {
@@ -377,8 +457,8 @@ module.exports.socketServer = io => {
 			printState("disconnect");
 		});
 
-		socket.on("newSeek", () => {
-			handleNewSeek(io, socket);
+		socket.on("newSeek", data => {
+			handleNewSeek(io, socket, data);
 			printState("newSeek");
 		});
 

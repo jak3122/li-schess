@@ -29,7 +29,7 @@ export default {
 		promotion: Promotion,
 		sPieceSelector: SPieceSelector
 	},
-	props: ["orientation", "isPlayer"],
+	props: ["orientation", "isPlayer", "gameOver"],
 	data() {
 		return {
 			inCheck: false,
@@ -53,8 +53,11 @@ export default {
 	},
 	watch: {
 		orientation: function(newOrientation) {
-			console.log("new orientation:", newOrientation);
 			this.ground.set({ orientation: newOrientation });
+		},
+		gameOver: function(newGameOver) {
+			this.gameInProgress = !newGameOver;
+			this.updateBoard();
 		}
 	},
 	computed: {
@@ -68,6 +71,12 @@ export default {
 		},
 		flipTurn() {
 			return { w: "black", b: "white" }[this.game.turn()];
+		},
+		updateStateTurn() {
+			this.$store.commit("setTurn", this.turn());
+		},
+		updateStatePly() {
+			this.$store.commit("setPly", this.game.history({verbose:true}).length);
 		},
 		isPieceInHand: function(pieceType, color) {
 			const colorIndex = color.charAt(0);
@@ -90,16 +99,12 @@ export default {
 		},
 		isPromotion(orig, dest) {
 			const piece = this.ground.state.pieces[dest];
-			if (
+			return (
 				piece &&
 				piece.role === "pawn" &&
 				((this.orientation === "white" && dest.charAt(1) === "8") ||
 					(this.orientation === "black" && dest.charAt(1) === "1"))
-			) {
-				return true;
-			} else {
-				return false;
-			}
+			);
 		},
 		isCastlingMove(orig, dest) {
 			const piece = this.ground.state.pieces[dest];
@@ -136,17 +141,14 @@ export default {
 			).s_square;
 		},
 		onMove: function(orig, dest, promotion, s_piece) {
-			console.log("onMove:", orig, dest, promotion);
 			const legalMoves = this.game.moves({ verbose: true });
 			if (!promotion && this.isPromotion(orig, dest)) {
-				console.log("onMove promotion", orig, dest, promotion);
 				this.promotionOrig = orig;
 				this.promotionDest = dest;
 				this.promoting = true;
 				return;
 			}
 			if (!this.addingSPiece && this.moveCanAddSPiece(orig, legalMoves)) {
-				console.log("doing spiece");
 				const hand = this.game.get_hand();
 				this.sPieceRoles = hand[this.game.turn()].map(p => {
 					return { e: "elephant", h: "hawk" }[p.type];
@@ -192,7 +194,8 @@ export default {
 				this.resetBoard();
 				return;
 			}
-			console.log("moveResult", moveResult);
+			this.updateStateTurn();
+			this.updateStatePly();
 			this.updateBoard();
 		},
 		onOpponentMove: function(move) {
@@ -213,12 +216,12 @@ export default {
 			if ("promotion" in move) {
 				this.setPromotedPiece(move.to, move.promotion, this.flipTurn());
 			}
+			this.updateStateTurn();
+			this.updateStatePly();
 			this.updateBoard();
-			console.log("after opponent move:", this.game.pgn());
 			this.performPremove();
 		},
 		setPromotedPiece: function(dest, role, color) {
-			console.log("setPromotedPiece:", dest, role, color);
 			const pieces = {};
 			pieces[dest] = {
 				color,
@@ -228,7 +231,6 @@ export default {
 			this.ground.setPieces(pieces);
 		},
 		addSPiece: function(pieceType, square, color) {
-			console.log("put spiece on board:", pieceType, square, color);
 			const role = { e: "elephant", h: "hawk" }[pieceType.charAt(0)];
 			this.ground.setPieces({ [square]: { role, color } });
 		},
@@ -281,7 +283,6 @@ export default {
 			});
 		},
 		finishPromotion: function(role) {
-			console.log("finish promotion:", role);
 			this.promoting = false;
 			this.setPromotedPiece(this.promotionDest, role, this.turn());
 			this.onMove(this.promotionOrig, this.promotionDest, role);
@@ -289,14 +290,12 @@ export default {
 			this.promotionDest = "";
 		},
 		cancelPromotion: function() {
-			console.log("cancel promotion");
 			this.promoting = false;
 			this.promotionOrig = "";
 			this.promotionDest = "";
 			this.resetBoard();
 		},
 		finishSPiece: function(role, square) {
-			console.log("finish spiece:", role, square);
 			this.onMove(
 				this.sPieceSquare,
 				this.sPieceMoveDest,
@@ -368,18 +367,17 @@ export default {
 			console.log("socket connected");
 		},
 		startGame: function() {
-			console.log("starting game");
 			this.gameInProgress = true;
 			this.game = new SChess();
 			this.resetBoard();
 			this.updateBoard();
+			this.updateStateTurn();
+			this.updateStatePly();
 		},
 		opponentMove: function(move) {
-			console.log("got opponent move:", move);
 			this.onOpponentMove(move);
 		},
 		fullGameUpdate: function(data) {
-			console.log("fullGameUpdate:", data);
 			this.gameInProgress = true;
 			this.game = new SChess(data.currentFen);
 			this.resetBoard();

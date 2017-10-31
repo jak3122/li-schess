@@ -20,7 +20,6 @@ export default {
 	props: ["orientation", "dest", "color", "roles", "rookSquare"],
 	computed: {
 		left: function() {
-			console.log("dest:", this.dest);
 			let left = (8 - key2pos(this.dest)[0]) * 12.5;
 			if (this.orientation === "white") left = 87.5 - left;
 			return left;
@@ -48,7 +47,6 @@ export default {
 			this.$emit("finish", role, square);
 		},
 		cancel: function() {
-			console.log("cancelled spiece");
 			this.$emit("cancel");
 		}
 	}

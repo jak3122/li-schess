@@ -27,135 +27,133 @@
 </template>
 
 <script>
-import BoardMini from '@/components/BoardMini';
+import BoardMini from "@/components/BoardMini";
 
 export default {
+	name: "Lobby",
 
-  name: 'Lobby',
+	components: {
+		miniBoard: BoardMini
+	},
 
-  components: {
-    miniBoard: BoardMini
-  },
+	data() {
+		return {
+			currentlySeeking: false,
+			seeks: [],
+			gameList: []
+		};
+	},
 
-  data() {
-    return {
-      currentlySeeking: false,
-      seeks: [],
-      gameList: []
-    }
-  },
+	created() {
+		this.$socket.emit("joinedLobby");
+		document.title = "schess.org";
+	},
 
-  created() {
-    this.$socket.emit("joinedLobby");
-    document.title = "schess.org";
-  },
+	beforeDestroy() {
+		this.$socket.emit("leftLobby");
+	},
 
-  beforeDestroy() {
-    this.$socket.emit("leftLobby");
-  },
+	methods: {
+		newSeek: function() {
+			this.currentlySeeking = true;
+			this.$socket.emit("newSeek", {
+				timeControl: { base: "1/2", increment: "0" }
+			});
+		},
+		acceptSeek: function(seek) {
+			if (seek.id === this.$socket.id) return;
+			this.$socket.emit("acceptSeek", seek);
+		},
+		cancelSeek: function() {
+			this.currentlySeeking = false;
+			this.$socket.emit("cancelSeek");
+		},
+		spectateGame: function(roomName) {
+			return function() {
+				this.$socket.emit("spectatorJoin", roomName);
+				this.$router.push({ name: "game", params: { roomName } });
+			}.bind(this);
+		}
+	},
 
-  methods: {
-    newSeek: function() {
-      this.currentlySeeking = true;
-      this.$socket.emit('newSeek');
-    },
-    acceptSeek: function(seek) {
-      if (seek.id === this.$socket.id) return;
-      this.$socket.emit("acceptSeek", seek);
-    },
-    cancelSeek: function() {
-      this.currentlySeeking = false;
-      this.$socket.emit("cancelSeek");
-    },
-    spectateGame: function(roomName) {
-      return function() {
-        this.$socket.emit("spectatorJoin", roomName);
-        this.$router.push({ name: 'game', params: { roomName } });
-      }.bind(this);
-    }
-  },
-
-  sockets: {
-    newSeek: function(seek) {
-      this.seeks.push(seek);
-    },
-    seekAccepted: function(roomName) {
-      this.currentlySeeking = false;
-      this.$router.push({ name: 'game', params: { roomName } });
-    },
-    removeSeek: function(id) {
-      const index = this.seeks.findIndex(seek => seek.id === id);
-      if (index !== -1) this.seeks.splice(index, 1);
-    },
-    allSeeks: function(seeks) {
-      this.seeks = seeks;
-    },
-    gameList: function(gameList) {
-      console.log("game list:", gameList);
-      this.gameList = gameList;
-    },
-    gameListUpdate: function(update) {
-      console.log("update:", update);
-      console.log("gameList:", this.gameList);
-      const index = this.gameList.findIndex(game => game.id === update.id);
-      if (index !== -1) {
-        console.log("updating", index);
-        const game = this.gameList[index];
-        this.gameList.splice(index, 1, { ...game, fen: update.fen });
-      }
-    }
-  },
-
+	sockets: {
+		newSeek: function(seek) {
+			this.seeks.push(seek);
+		},
+		seekAccepted: function(roomName) {
+			this.currentlySeeking = false;
+			this.$router.push({ name: "game", params: { roomName } });
+		},
+		removeSeek: function(id) {
+			const index = this.seeks.findIndex(seek => seek.id === id);
+			if (index !== -1) this.seeks.splice(index, 1);
+		},
+		allSeeks: function(seeks) {
+			this.seeks = seeks;
+		},
+		gameList: function(gameList) {
+			this.gameList = gameList;
+		},
+		gameListUpdate: function(update) {
+			const index = this.gameList.findIndex(
+				game => game.id === update.id
+			);
+			if (index !== -1) {
+				const game = this.gameList[index];
+				this.gameList.splice(index, 1, { ...game, fen: update.fen });
+			}
+		}
+	}
 };
 </script>
 
 <style scoped>
 .lobby {
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
+	padding: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
 }
 
 .seek-button {
-  height: 100px;
+	height: 100px;
 }
 
 p {
-  text-align: center;
+	text-align: center;
 }
 
 .active-seeks {
-  height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow-y: scroll;
+	height: 300px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	overflow-y: scroll;
 }
 
 table.seek-list {
-  width: 300px;
-  /* border: 1px solid black; */
-  border-collapse: collapse;
+	width: 300px;
+	/* border: 1px solid black; */
+	border-collapse: collapse;
 }
 
 .seek-list th,
 td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  border-top: 1px solid #ddd;
-  cursor: pointer;
+	padding: 10px;
+	border-bottom: 1px solid #ddd;
+	border-top: 1px solid #ddd;
+	cursor: pointer;
 }
 
 .seek-list tr:hover {
-  background-color: #f5f5f5
+	background-color: #f5f5f5;
 }
 
 .game-list {
-  width: 1000px;
-  display: grid;
-  grid-template-rows: 333px 333px 333px;
-  grid-template-columns: 333px 333px 333px;
+	width: 1000px;
+	display: grid;
+	grid-template-rows: 333px 333px 333px;
+	grid-template-columns: 333px 333px 333px;
 }
 </style>
