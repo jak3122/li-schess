@@ -7,6 +7,16 @@
       <p>Waiting for a player to accept your seek...</p>
     </div>
     <div v-else class="seek-button">
+			<p>
+				<select v-model="timeBase">
+					<option disabled value="">Time (mins)</option>
+					<option v-for="time in timeControls" :key="time">{{ time }}</option>
+				</select>
+				<select v-model="timeIncrement">
+					<option disabled value="">Increment (sec)</option>
+					<option v-for="inc in timeIncrements" :key="inc">{{ inc }}</option>
+				</select>
+			</p>
       <p>
         <button @click="newSeek">Seek Game</button>
       </p>
@@ -40,13 +50,23 @@ export default {
 		return {
 			currentlySeeking: false,
 			seeks: [],
-			gameList: []
+			gameList: [],
+			timeBase: "",
+			timeIncrement: "",
+			timeControls: [],
+			timeIncrements: []
 		};
 	},
 
 	created() {
 		this.$socket.emit("joinedLobby");
 		document.title = "schess.org";
+		this.timeControls = ["1/4", "1/2"];
+		this.timeControls = this.timeControls.concat(
+			[...Array(20).keys()].map(n => n.toString())
+		);
+		this.timeControls.concat(["25", "30", "45", "60"]);
+		this.timeIncrements = [...Array(20).keys()].map(n => n.toString());
 	},
 
 	beforeDestroy() {
@@ -56,8 +76,10 @@ export default {
 	methods: {
 		newSeek: function() {
 			this.currentlySeeking = true;
+			const base = this.timeBase || "5";
+			const increment = this.timeIncrement || "2";
 			this.$socket.emit("newSeek", {
-				timeControl: { base: "1/2", increment: "0" }
+				timeControl: { base, increment }
 			});
 		},
 		acceptSeek: function(seek) {

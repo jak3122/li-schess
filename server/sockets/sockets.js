@@ -175,8 +175,11 @@ const handleAcceptSeek = (io, socket, seek) => {
 		timeControl: seek.timeControl,
 		whiteTime: seek.timeControl.base,
 		blackTime: seek.timeControl.base,
-		whiteClock: new clock(seek.timeControl.base),
-		blackClock: new clock(seek.timeControl.base)
+		whiteClock: new clock(
+			seek.timeControl.base,
+			seek.timeControl.increment
+		),
+		blackClock: new clock(seek.timeControl.base, seek.timeControl.increment)
 	};
 	const whiteFlagCallback = () => handleFlag(io, socket, newRoom, "white");
 	const blackFlagCallback = () => handleFlag(io, socket, newRoom, "black");
@@ -195,10 +198,15 @@ const handleAcceptSeek = (io, socket, seek) => {
 	const blackName = sockets[black.id].username;
 	const whiteId = white.id;
 	const blackId = black.id;
+	const { timeControl } = newRoom;
 	console.log("startGame", roomName, whiteName, blackName);
-	io
-		.in(roomName)
-		.emit("startGame", { whiteName, blackName, whiteId, blackId });
+	io.in(roomName).emit("startGame", {
+		whiteName,
+		blackName,
+		whiteId,
+		blackId,
+		timeControl
+	});
 	emitGameListUpdate(io, newRoom.id);
 	removeSeek(io, seek.id);
 	removeSeek(io, socket.id);
@@ -261,8 +269,14 @@ const handleAcceptRematch = (io, socket) => {
 	room.black.emit("setColor", "black");
 	room.whiteTime = room.timeControl.base;
 	room.blackTime = room.timeControl.base;
-	room.whiteClock = new clock(room.timeControl.base);
-	room.blackClock = new clock(room.timeControl.base);
+	room.whiteClock = new clock(
+		room.timeControl.base,
+		room.timeControl.increment
+	);
+	room.blackClock = new clock(
+		room.timeControl.base,
+		room.timeControl.increment
+	);
 	const whiteFlagCallback = () => handleFlag(io, socket, room, "white");
 	const blackFlagCallback = () => handleFlag(io, socket, room, "black");
 	room.whiteClock.onTimeUp(whiteFlagCallback);

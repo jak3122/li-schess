@@ -11,7 +11,7 @@ import clock from "../chess/clock";
 
 export default {
 	name: "Clock",
-	props: ["running", "time", "onFlag"],
+	props: ["running", "time", "increment"],
 	data() {
 		return {
 			clock: new clock(this.time),
@@ -22,7 +22,6 @@ export default {
 		this.clock.onTick(newTime => {
 			this.currentTime = newTime;
 		});
-		this.clock.onTimeUp(this.onFlag);
 		if (this.running) this.clock.start(this.currentTime);
 	},
 	computed: {
@@ -54,6 +53,9 @@ export default {
 			} else {
 				this.clock.setDuration(newTime);
 			}
+		},
+		increment: function(newIncrement) {
+			this.clock.setIncrement(newIncrement);
 		}
 	}
 };

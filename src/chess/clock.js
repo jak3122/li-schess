@@ -1,7 +1,7 @@
 const clock = function(baseTime, increment) {
 	if (typeof baseTime !== "undefined") this.baseTime = baseTime;
-	if (typeof increment !== "undefined") this.increment = increment;
 	this.duration = baseTime;
+	this.increment = increment;
 	this.granularity = 10;
 	this.running = false;
 	this.timer = null;
@@ -44,6 +44,10 @@ const clock = function(baseTime, increment) {
 		this.duration = duration;
 	};
 
+	this.setIncrement = increment => {
+		this.increment = increment;
+	};
+
 	this.onTick = callback => {
 		if (typeof callback === "function") {
 			this.tickCallbacks.push(callback);
@@ -68,7 +72,14 @@ const clock = function(baseTime, increment) {
 		}
 		this.timer = null;
 		this.duration -= Date.now() - this.startTime;
-		console.log("duration after pause:", this.duration);
+		console.log(
+			"duration before",
+			this.increment,
+			"increment:",
+			this.duration
+		);
+		if (this.increment) this.duration += this.increment * 1000;
+		console.log("duration after increment:", this.duration);
 	};
 
 	this.parse = millis => {

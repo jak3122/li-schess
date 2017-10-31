@@ -5,7 +5,7 @@
       <chat :isPlayer="isPlayer"></chat>
       <board :orientation="orientation" :isPlayer="isPlayer" :gameOver="gameOver"></board>
       <div class="room-controls">
-        <clock :time="opponentTime" :running="isOpponentTurn"></clock>
+        <clock :time="opponentTime" :running="isOpponentTurn" :increment="timeIncrement"></clock>
         <div class="player-name opponent">{{ opponentName }}</div>
         <button v-if="isPlayer && !gameOver" @click="resign">Resign</button>
         <div class="rematch" v-if="isPlayer && gameOver">
@@ -14,7 +14,7 @@
           <button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
         </div>
         <div class="player-name me">{{ myName }}</div>
-        <clock :time="myTime" :running="isMyTurn"></clock>
+        <clock :time="myTime" :running="isMyTurn" :increment="timeIncrement"></clock>
       </div>
       <div class="status-messages">
         <div v-if="gameOver">Game over.</div>
@@ -77,7 +77,8 @@ export default {
 	computed: {
 		...mapGetters({
 			turn: "getTurn",
-			timeControl: "getTimeControl",
+			timeBase: "getTimeBase",
+			timeIncrement: "getTimeIncrement",
 			ply: "getPly"
 		}),
 		isOpponentTurn: function() {
@@ -110,6 +111,7 @@ export default {
 	},
 	beforeDestroy() {
 		this.$socket.emit("leaveRoom", this.roomName);
+		this.$store.commit("setPly", 0);
 	},
 	methods: {
 		flipBoard: function() {
@@ -133,21 +135,28 @@ export default {
 			this.$socket.emit("acceptRematch");
 		},
 		resetClocks: function() {
-			this.opponentTime = this.timeControl.base;
-			this.myTime = this.timeControl.base;
+			this.opponentTime = this.timeBase;
+			this.myTime = this.timeBase;
 		}
 	},
 	sockets: {
 		startGame: function(data) {
 			Object.assign(this.$data, initialState);
-			this.resetClocks();
 			this.pgn = "";
 			if (data) {
 				this.whiteName = data.whiteName;
 				this.blackName = data.blackName;
 				this.whiteId = data.whiteId;
 				this.blackId = data.blackId;
+				if (data.timeControl) {
+					this.$store.commit("setTimeBase", data.timeControl.base);
+					this.$store.commit(
+						"setTimeIncrement",
+						data.timeControl.increment
+					);
+				}
 			}
+			this.resetClocks();
 		},
 		joinRoomAsPlayer: function(data) {
 			this.isPlayer = true;
