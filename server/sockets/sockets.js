@@ -474,7 +474,7 @@ module.exports.socketServer = io => {
 
 		socket.on("newSeek", data => {
 			handleNewSeek(io, socket, data);
-			printState("newSeek");
+			printState("newSeek", `${data.timeControl.base}+${data.timeControl.increment}`);
 		});
 
 		socket.on("acceptSeek", seek => {
