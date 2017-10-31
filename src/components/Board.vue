@@ -75,8 +75,11 @@ export default {
 		updateStateTurn() {
 			this.$store.commit("setTurn", this.turn());
 		},
-		updateStatePly() {
-			this.$store.commit("setPly", this.game.history({verbose:true}).length);
+		setStatePly(ply) {
+			this.$store.commit("setPly", ply);
+		},
+		incrementStatePly() {
+			this.$store.commit("incrementPly");
 		},
 		isPieceInHand: function(pieceType, color) {
 			const colorIndex = color.charAt(0);
@@ -195,7 +198,7 @@ export default {
 				return;
 			}
 			this.updateStateTurn();
-			this.updateStatePly();
+			this.incrementStatePly();
 			this.updateBoard();
 		},
 		onOpponentMove: function(move) {
@@ -217,7 +220,7 @@ export default {
 				this.setPromotedPiece(move.to, move.promotion, this.flipTurn());
 			}
 			this.updateStateTurn();
-			this.updateStatePly();
+			this.incrementStatePly();
 			this.updateBoard();
 			this.performPremove();
 		},
@@ -372,7 +375,7 @@ export default {
 			this.resetBoard();
 			this.updateBoard();
 			this.updateStateTurn();
-			this.updateStatePly();
+			this.setStatePly(0);
 		},
 		opponentMove: function(move) {
 			this.onOpponentMove(move);

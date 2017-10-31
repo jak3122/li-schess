@@ -419,7 +419,8 @@ const emitFullGameUpdate = (io, socket, roomName) => {
 			currentFen: room.currentFen,
 			spectators,
 			whiteTime: room.whiteTime,
-			blackTime: room.blackTime
+			blackTime: room.blackTime,
+			ply: room.game.history({ verbose: true }).length
 		};
 		socket.emit("fullGameUpdate", roomUpdate);
 	} catch (err) {

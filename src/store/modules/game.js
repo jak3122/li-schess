@@ -21,6 +21,9 @@ const mutations = {
 	},
 	setPly(state, ply) {
 		state.ply = ply;
+	},
+	incrementPly(state) {
+		state.ply += 1;
 	}
 };
 

@@ -137,6 +137,30 @@ export default {
 		resetClocks: function() {
 			this.opponentTime = this.timeBase;
 			this.myTime = this.timeBase;
+		},
+		setTimes: function(times) {
+			console.log("updateTimes:", times);
+			if (this.orientation === "white") {
+				console.log("myTime:", this.myTime, "->", times.whiteTime);
+				console.log(
+					"opponentTime:",
+					this.opponentTime,
+					"->",
+					times.blackTime
+				);
+				this.myTime = times.whiteTime;
+				this.opponentTime = times.blackTime;
+			} else if (this.orientation === "black") {
+				console.log("myTime:", this.myTime, "->", times.blackTime);
+				console.log(
+					"opponentTime:",
+					this.opponentTime,
+					"->",
+					times.whiteTime
+				);
+				this.myTime = times.blackTime;
+				this.opponentTime = times.whiteTime;
+			}
 		}
 	},
 	sockets: {
@@ -171,6 +195,11 @@ export default {
 			this.blackName = data.blackName;
 			this.whiteId = data.whiteId;
 			this.blackId = data.blackId;
+			this.$store.commit("setPly", data.ply);
+			this.setTimes({
+				whiteTime: data.whiteTime,
+				blackTime: data.blackTime
+			});
 		},
 		whiteWinsMate: function() {
 			this.whiteWinsMate = true;
@@ -205,28 +234,7 @@ export default {
 			this.rematchStatus = "initial";
 		},
 		updateTimes: function(times) {
-			console.log("updateTimes:", times);
-			if (this.orientation === "white") {
-				console.log("myTime:", this.myTime, "->", times.whiteTime);
-				console.log(
-					"opponentTime:",
-					this.opponentTime,
-					"->",
-					times.blackTime
-				);
-				this.myTime = times.whiteTime;
-				this.opponentTime = times.blackTime;
-			} else if (this.orientation === "black") {
-				console.log("myTime:", this.myTime, "->", times.blackTime);
-				console.log(
-					"opponentTime:",
-					this.opponentTime,
-					"->",
-					times.whiteTime
-				);
-				this.myTime = times.blackTime;
-				this.opponentTime = times.whiteTime;
-			}
+			this.setTimes(times);
 		},
 		playerFlagged: function(data) {
 			const { color } = data;
