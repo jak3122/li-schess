@@ -1,36 +1,42 @@
 <template>
-  <div class="game-area">
-    <div class="loading" v-if="loading"></div>
-    <div class="content" v-if="!loading">
-      <chat :isPlayer="isPlayer"></chat>
-      <board :orientation="orientation" :isPlayer="isPlayer" :gameOver="gameOver"></board>
-      <div class="room-controls">
-        <clock :time="opponentTime" :running="isOpponentTurn" :increment="timeIncrement"></clock>
-        <div class="player-name opponent">{{ opponentName }}</div>
-        <button v-if="isPlayer && !gameOver" @click="resign">Resign</button>
-        <div class="rematch" v-if="isPlayer && gameOver">
-          <button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
-          <button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
-          <button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
-        </div>
-        <div class="player-name me">{{ myName }}</div>
-        <clock :time="myTime" :running="isMyTurn" :increment="timeIncrement"></clock>
-      </div>
-      <div class="status-messages">
-        <div v-if="gameOver">Game over.</div>
-        <div v-if="whiteWinsMate">Checkmate - White wins!</div>
-        <div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
-        <div v-else-if="whiteResigned">White resigned.</div>
-        <div v-else-if="blackResigned">Black resigned.</div>
-        <div v-else-if="opponentDisconnected">Opponent disconnected.</div>
-		<div v-else-if="whiteWinsFlag">Time out. White wins!</div>
-		<div v-else-if="blackWinsFlag">Time out. Black wins!</div>
-        <div v-if="pgn">
-          <textarea readonly class="pgn" v-model="pgn"></textarea>
-        </div>
-      </div>
-    </div>
-  </div>
+	<div class="game-area">
+		<div class="loading" v-if="loading"></div>
+		<div class="content" v-if="!loading">
+			<div class="left-area">
+				<div class="game-info">
+					<div class="players-vs">{{ whiteName }} vs {{ blackName }}</div>
+					<div class="time-control">{{ timeBase/60000 }}+{{ timeIncrement }}</div>
+				</div>
+				<chat :isPlayer="isPlayer"></chat>
+			</div>
+			<board :orientation="orientation" :isPlayer="isPlayer" :gameOver="gameOver"></board>
+			<div class="room-controls">
+				<clock :time="opponentTime" :running="isOpponentTurn" :increment="timeIncrement"></clock>
+				<div class="player-name opponent">{{ opponentName }}</div>
+				<button v-if="isPlayer && !gameOver" @click="resign">Resign</button>
+				<div class="rematch" v-if="isPlayer && gameOver">
+					<button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
+					<button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
+					<button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
+				</div>
+				<div class="player-name me">{{ myName }}</div>
+				<clock :time="myTime" :running="isMyTurn" :increment="timeIncrement"></clock>
+			</div>
+			<div class="status-messages">
+				<div v-if="gameOver">Game over.</div>
+				<div v-if="whiteWinsMate">Checkmate - White wins!</div>
+				<div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
+				<div v-else-if="whiteResigned">White resigned.</div>
+				<div v-else-if="blackResigned">Black resigned.</div>
+				<div v-else-if="opponentDisconnected">Opponent disconnected.</div>
+				<div v-else-if="whiteWinsFlag">Time out. White wins!</div>
+				<div v-else-if="blackWinsFlag">Time out. Black wins!</div>
+				<div v-if="pgn">
+					<textarea readonly class="pgn" v-model="pgn"></textarea>
+				</div>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script>
@@ -256,6 +262,26 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.left-area {
+	display: flex;
+	flex-direction: column;
+}
+
+.left-area .game-info {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	padding: 20px;
+	margin-right: 15px;
+	margin-bottom: 10px;
+	border: 1px solid lightgray;
+}
+
+.left-area .game-info * {
+	padding: 5px;
 }
 
 .right-area {
