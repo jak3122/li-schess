@@ -11,29 +11,28 @@
 			</div>
 			<board :orientation="orientation" :isPlayer="isPlayer" :gameOver="gameOver"></board>
 			<div class="room-controls">
-				<clock :time="opponentTime" :running="isOpponentTurn" :increment="timeIncrement"></clock>
-				<div class="player-name opponent">{{ opponentName }}</div>
-				<button v-if="isPlayer && !gameOver" @click="resign">Resign</button>
-				<div class="rematch" v-if="isPlayer && gameOver">
-					<button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
-					<button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
-					<button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
+				<clock position="top" :time="opponentTime" :running="isOpponentTurn" :increment="timeIncrement"></clock>
+				<div class="game-table">
+					<div class="player-name opponent">{{ opponentName }}</div>
+					<moveList></moveList>
+					<div class="status-messages" v-if="gameOver">
+						<div v-if="whiteWinsMate">Checkmate - White wins!</div>
+						<div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
+						<div v-else-if="whiteResigned">White resigned.</div>
+						<div v-else-if="blackResigned">Black resigned.</div>
+						<div v-else-if="opponentDisconnected">Opponent disconnected.</div>
+						<div v-else-if="whiteWinsFlag">Time out. White wins!</div>
+						<div v-else-if="blackWinsFlag">Time out. Black wins!</div>
+					</div>
+					<button v-if="isPlayer && !gameOver" @click="resign">Resign</button>
+					<template v-if="isPlayer && gameOver">
+						<button v-if="rematchStatus === 'initial'" @click="offerRematch">Rematch</button>
+						<button v-if="rematchStatus === 'offered'" @click="cancelRematch">Cancel Rematch</button>
+						<button v-if="rematchStatus === 'pending'" @click="acceptRematch">Accept Rematch</button>
+					</template>
+					<div class="player-name me">{{ myName }}</div>
 				</div>
-				<div class="player-name me">{{ myName }}</div>
-				<clock :time="myTime" :running="isMyTurn" :increment="timeIncrement"></clock>
-			</div>
-			<div class="status-messages">
-				<div v-if="gameOver">Game over.</div>
-				<div v-if="whiteWinsMate">Checkmate - White wins!</div>
-				<div v-else-if="blackWinsMate">Checkmate - Black wins!</div>
-				<div v-else-if="whiteResigned">White resigned.</div>
-				<div v-else-if="blackResigned">Black resigned.</div>
-				<div v-else-if="opponentDisconnected">Opponent disconnected.</div>
-				<div v-else-if="whiteWinsFlag">Time out. White wins!</div>
-				<div v-else-if="blackWinsFlag">Time out. Black wins!</div>
-				<div v-if="pgn">
-					<textarea readonly class="pgn" v-model="pgn"></textarea>
-				</div>
+				<clock position="bottom" :time="myTime" :running="isMyTurn" :increment="timeIncrement"></clock>
 			</div>
 		</div>
 	</div>
@@ -44,6 +43,7 @@ import { mapGetters } from "vuex";
 import Board from "@/components/Board";
 import Chat from "@/components/Chat";
 import Clock from "@/components/Clock";
+import MoveList from "@/components/MoveList";
 
 const initialState = {
 	gameOver: false,
@@ -54,7 +54,6 @@ const initialState = {
 	whiteWinsFlag: false,
 	blackWinsFlag: false,
 	opponentDisconnected: false,
-	pgn: "",
 	rematchStatus: "initial",
 	opponentTime: 0,
 	myTime: 0
@@ -65,7 +64,8 @@ export default {
 	components: {
 		board: Board,
 		chat: Chat,
-		clock: Clock
+		clock: Clock,
+		moveList: MoveList
 	},
 	props: ["roomName"],
 	data() {
@@ -85,16 +85,17 @@ export default {
 			turn: "getTurn",
 			timeBase: "getTimeBase",
 			timeIncrement: "getTimeIncrement",
-			ply: "getPly"
+			ply: "getPly",
+			gamePly: "gamePly"
 		}),
 		isOpponentTurn: function() {
 			return (
-				!this.gameOver && this.ply > 1 && this.turn !== this.orientation
+				!this.gameOver && this.gamePly > 1 && this.turn !== this.orientation
 			);
 		},
 		isMyTurn: function() {
 			return (
-				!this.gameOver && this.ply > 1 && this.turn === this.orientation
+				!this.gameOver && this.gamePly > 1 && this.turn === this.orientation
 			);
 		},
 		myName: function() {
@@ -171,8 +172,8 @@ export default {
 	},
 	sockets: {
 		startGame: function(data) {
+			console.log("GameArea startGame");
 			Object.assign(this.$data, initialState);
-			this.pgn = "";
 			if (data) {
 				this.whiteName = data.whiteName;
 				this.blackName = data.blackName;
@@ -187,6 +188,7 @@ export default {
 				}
 			}
 			this.resetClocks();
+			this.$store.commit("resetMoves");
 		},
 		joinRoomAsPlayer: function(data) {
 			this.isPlayer = true;
@@ -229,9 +231,6 @@ export default {
 		},
 		setColor: function(color) {
 			this.orientation = color;
-		},
-		pgn: function(pgn) {
-			this.pgn = pgn;
 		},
 		offerRematch: function() {
 			this.rematchStatus = "pending";
@@ -289,6 +288,13 @@ export default {
 	flex-direction: column;
 }
 
+.game-table {
+	display: flex;
+	flex-direction: column;
+    border: 1px solid #ccc;
+	align-items: center;
+}
+
 .room-controls-top {
 	display: flex;
 	flex-direction: row;
@@ -296,33 +302,35 @@ export default {
 }
 
 .room-controls {
-	width: 150px;
+	width: 242px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
-	margin: 50px;
+	margin-left: 15px;
 }
 
 .room-controls button {
-	margin: 30px;
-	width: 120px;
-	transform: scale(1.4);
+	padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+	cursor: pointer;
 }
 
 .status-messages {
-	width: 200px;
+	width: 100%;
+	padding: 7px 0;
 	font-size: 14px;
-}
-
-.pgn {
-	width: 150px;
-	height: 60px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+    border: 1px solid #ccc;
 }
 
 .player-name {
 	font-size: 18px;
 	letter-spacing: 2px;
+	padding: 10px;
 }
 </style>
 

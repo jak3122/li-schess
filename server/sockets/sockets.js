@@ -64,7 +64,7 @@ const handleMove = (io, socket, move) => {
 	const room = sockets[socket.id].room;
 	const game = room.game;
 	const moveColor = game.turn();
-	game.move(
+	const moveResult = game.move(
 		Object.assign({}, move, {
 			promotion: move.promotion ? move.promotion.charAt(0) : undefined
 		})
@@ -85,6 +85,7 @@ const handleMove = (io, socket, move) => {
 	}
 	const roomName = room.id;
 	room.currentFen = game.fen();
+	room.moves.push({ fen: room.currentFen, lastMove: moveResult });
 	socket.to(roomName).emit("opponentMove", move);
 	emitUpdateTimes(io, room);
 	emitGameListUpdate(io, room.id);
@@ -163,13 +164,21 @@ const handleAcceptSeek = (io, socket, seek) => {
 		seek.timeControl.base
 	);
 	seek.timeControl.increment = Number(seek.timeControl.increment);
+	const gameObj = new SChess();
+	const fen = gameObj.fen();
 	const newRoom = {
 		id: shortid.generate(),
 		white,
 		black,
 		players,
-		game: new SChess(),
-		currentFen: new SChess().fen(),
+		game: gameObj,
+		moves: [
+			{
+				fen,
+				lastMove: { from: undefined, to: undefined }
+			}
+		],
+		currentFen: fen,
 		inPlay: true,
 		spectators: [],
 		timeControl: seek.timeControl,
@@ -264,6 +273,8 @@ const handleAcceptRematch = (io, socket) => {
 	room.black = room.players[0];
 	room.players = [room.white, room.black];
 	room.game = new SChess();
+	const fen = room.game.fen();
+	room.moves = [{ fen, lastMove: {} }];
 	room.inPlay = true;
 	room.white.emit("setColor", "white");
 	room.black.emit("setColor", "black");
@@ -407,6 +418,7 @@ const emitFullGameUpdate = (io, socket, roomName) => {
 		const whiteName = sockets[room.white.id].username;
 		const blackName = sockets[room.black.id].username;
 		const spectators = getSpectators(room);
+		const moves = room.moves;
 		console.log(
 			`fullGameUpdate room.id: ${room.id}, fen: ${room.currentFen}`
 		);
@@ -420,7 +432,8 @@ const emitFullGameUpdate = (io, socket, roomName) => {
 			spectators,
 			whiteTime: room.whiteTime,
 			blackTime: room.blackTime,
-			ply: room.game.history({ verbose: true }).length
+			moves,
+			ply: moves.length - 1
 		};
 		socket.emit("fullGameUpdate", roomUpdate);
 	} catch (err) {
@@ -474,7 +487,10 @@ module.exports.socketServer = io => {
 
 		socket.on("newSeek", data => {
 			handleNewSeek(io, socket, data);
-			printState("newSeek", `${data.timeControl.base}+${data.timeControl.increment}`);
+			printState(
+				"newSeek",
+				`${data.timeControl.base}+${data.timeControl.increment}`
+			);
 		});
 
 		socket.on("acceptSeek", seek => {

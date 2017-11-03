@@ -18,6 +18,7 @@
 </template>
 
 <script>
+import { mapGetters } from "vuex";
 import SChess from "schess.js";
 import Chessground from "cg/dist/chessground";
 import Promotion from "@/components/Promotion";
@@ -58,9 +59,16 @@ export default {
 		gameOver: function(newGameOver) {
 			this.gameInProgress = !newGameOver;
 			this.updateBoard();
+		},
+		currentPly: function(newPly) {
+			this.jump(newPly);
 		}
 	},
 	computed: {
+		...mapGetters({
+            moveList: "getMoves",
+            currentPly: "getPly"
+        }),
 		opponentColor: function() {
 			return this.orientation === "white" ? "black" : "white";
 		}
@@ -80,6 +88,22 @@ export default {
 		},
 		incrementStatePly() {
 			this.$store.commit("incrementPly");
+		},
+		jump: function(ply) {
+			this.ground.cancelPremove();
+			this.ground.cancelMove();
+			const {fen, lastMove} = this.moveList[ply];
+			this.ground.set({
+				fen, lastMove: [lastMove.from, lastMove.to],
+				movable: {
+					color: undefined,
+					dests: undefined
+				}
+			});
+			console.log("in jump: ply:", ply, "moves length:", this.moveList.length);
+			if (ply === this.moveList.length - 1) {
+				this.updateBoard();
+			}
 		},
 		isPieceInHand: function(pieceType, color) {
 			const colorIndex = color.charAt(0);
@@ -156,7 +180,6 @@ export default {
 				this.sPieceRoles = hand[this.game.turn()].map(p => {
 					return { e: "elephant", h: "hawk" }[p.type];
 				});
-
 				if (
 					this.isCastlingMove(orig, dest) &&
 					this.moveCanAddSPieceOnRookSquare(orig, dest, legalMoves)
@@ -198,15 +221,17 @@ export default {
 				return;
 			}
 			this.updateStateTurn();
+			this.$store.commit("addMove", {
+				fen: this.game.fen(),
+				lastMove: moveResult
+			});
 			this.incrementStatePly();
-			this.updateBoard();
 		},
 		onOpponentMove: function(move) {
-			this.game.move({
+			const moveResult = this.game.move({
 				...move,
 				promotion: move.promotion ? move.promotion.charAt(0) : undefined
 			});
-			this.ground.move(move.from, move.to);
 			if ("s_piece" in move) {
 				if ("s_square" in move)
 					this.addSPiece(
@@ -220,8 +245,11 @@ export default {
 				this.setPromotedPiece(move.to, move.promotion, this.flipTurn());
 			}
 			this.updateStateTurn();
+			this.$store.commit("addMove", {
+				fen: this.game.fen(),
+				lastMove: moveResult
+			});
 			this.incrementStatePly();
-			this.updateBoard();
 			this.performPremove();
 		},
 		setPromotedPiece: function(dest, role, color) {
@@ -370,6 +398,7 @@ export default {
 			console.log("socket connected");
 		},
 		startGame: function() {
+			console.log("Board startGame");
 			this.gameInProgress = true;
 			this.game = new SChess();
 			this.resetBoard();
@@ -385,6 +414,7 @@ export default {
 			this.game = new SChess(data.currentFen);
 			this.resetBoard();
 			this.updateBoard();
+			this.$store.commit("setMoves", data.moves);
 		}
 	}
 };

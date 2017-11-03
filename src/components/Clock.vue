@@ -1,5 +1,5 @@
 <template>
-    <div class="clock" :class="{ running }">
+    <div class="clock" :class="[{ running }, position]">
         {{ timeParsed.minutes }}
         <div class="sep" :class="{ low: sepLow }">:</div>
         {{ timeParsed.seconds }}
@@ -11,7 +11,7 @@ import clock from "../chess/clock";
 
 export default {
 	name: "Clock",
-	props: ["running", "time", "increment"],
+	props: ["position", "running", "time", "increment"],
 	data() {
 		return {
 			clock: new clock(this.time),
@@ -66,14 +66,29 @@ export default {
 	font-family: "Roboto Mono", "Roboto";
 	font-size: 38px;
 	color: rgba(0, 0, 0, 0.3);
+	align-self: left;
+	border: 1px solid #ccc;
+	padding: 0 8px;
+	line-height: 44px;
+    white-space: nowrap;
+    will-change: transform;
+	font-family: 'Roboto Mono','Roboto';
+    height: 44px;
 }
 .clock.running {
 	color: black;
+	background: #fff077;
 }
 .clock .sep {
 	display: inline-block;
 }
 .clock .sep.low {
 	opacity: 0.15;
+}
+.clock.top {
+	border-bottom: 0;
+}
+.clock.bottom {
+	border-top: 0;
 }
 </style>
