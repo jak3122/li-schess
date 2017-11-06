@@ -11,6 +11,27 @@ const sockets = {};
 
 let numConnections = 0;
 
+const removeDeadSeeks = () => {
+	const deadSeeks = [];
+	seeks.forEach((seek, index) => {
+		if (!sockets.hasOwnProperty(seek.id)) {
+			deadSeeks.push(index);
+		}
+	});
+	if (deadSeeks.length > 0)
+		console.log(
+			"removing dead seeks:",
+			deadSeeks.map(seekIndex => {
+				const seek = seeks[seekIndex];
+				return `[${seek.id}:${seek.username}@${seek.timeControl
+					.base}+${seek.timeControl.increment}]`;
+			})
+		);
+	deadSeeks.forEach(seekIndex => {
+		seeks.splice(seekIndex, 1);
+	});
+};
+
 const timeControlBaseStringToMillis = minString => {
 	switch (minString) {
 		case "1/4":
@@ -340,6 +361,7 @@ const handleGameChatMessage = (io, socket, message) => {
 
 const handleJoinedLobby = (io, socket) => {
 	socket.join("lobby");
+	removeDeadSeeks();
 	socket.emit("allSeeks", seeks);
 	const gameList = rooms
 		.filter(room => room.inPlay === true)
