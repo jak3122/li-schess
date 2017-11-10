@@ -101,12 +101,6 @@ export default {
 					dests: undefined
 				}
 			});
-			console.log(
-				"in jump: ply:",
-				ply,
-				"moves length:",
-				this.moveList.length
-			);
 			if (ply === this.moveList.length - 1) {
 				this.updateBoard();
 			}
@@ -405,7 +399,6 @@ export default {
 			console.log("socket connected");
 		},
 		startGame: function() {
-			console.log("Board startGame");
 			this.gameInProgress = true;
 			this.game = new SChess();
 			this.resetBoard();

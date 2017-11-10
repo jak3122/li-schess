@@ -6,10 +6,8 @@ const roles = ["queen", "elephant", "hawk", "knight", "rook", "bishop"];
 const key2pos = k => [k.charCodeAt(0) - 96, k.charCodeAt(1) - 48];
 
 function cancel() {
-	console.log("cancel promotion");
 }
 function finish(role) {
-	console.log("promoted to piece:", role);
 }
 function bind(eventName, f, redraw) {
 	return {

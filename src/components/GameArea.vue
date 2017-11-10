@@ -146,25 +146,10 @@ export default {
 			this.myTime = this.timeBase;
 		},
 		setTimes: function(times) {
-			console.log("updateTimes:", times);
 			if (this.orientation === "white") {
-				console.log("myTime:", this.myTime, "->", times.whiteTime);
-				console.log(
-					"opponentTime:",
-					this.opponentTime,
-					"->",
-					times.blackTime
-				);
 				this.myTime = times.whiteTime;
 				this.opponentTime = times.blackTime;
 			} else if (this.orientation === "black") {
-				console.log("myTime:", this.myTime, "->", times.blackTime);
-				console.log(
-					"opponentTime:",
-					this.opponentTime,
-					"->",
-					times.whiteTime
-				);
 				this.myTime = times.blackTime;
 				this.opponentTime = times.whiteTime;
 			}
@@ -172,7 +157,6 @@ export default {
 	},
 	sockets: {
 		startGame: function(data) {
-			console.log("GameArea startGame");
 			Object.assign(this.$data, initialState);
 			if (data) {
 				this.whiteName = data.whiteName;
@@ -243,7 +227,6 @@ export default {
 		},
 		playerFlagged: function(data) {
 			const { color } = data;
-			console.log(color, "flagged");
 			if (color === "white") {
 				this.blackWinsFlag = true;
 			} else if (color === "black") {

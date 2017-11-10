@@ -72,14 +72,7 @@ const clock = function(baseTime, increment) {
 		}
 		this.timer = null;
 		this.duration -= Date.now() - this.startTime;
-		console.log(
-			"duration before",
-			this.increment,
-			"increment:",
-			this.duration
-		);
 		if (this.increment) this.duration += this.increment * 1000;
-		console.log("duration after increment:", this.duration);
 	};
 
 	this.parse = millis => {

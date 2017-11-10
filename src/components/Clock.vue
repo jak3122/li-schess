@@ -37,15 +37,29 @@ export default {
 	watch: {
 		running: function(newRunning) {
 			if (newRunning === true) {
-				console.log("starting clock");
 				this.clock.start();
 			} else {
-				console.log("pausing clock");
 				this.clock.pause();
 			}
 		},
 		time: function(newTime) {
-			console.log("old time:", this.time, "new time:", newTime);
+			try {
+				const oldParsed = this.clock.parse(this.time);
+				const newParsed = this.clock.parse(newTime);
+				console.warn(
+					"old time:",
+					this.time,
+					`(${oldParsed.minutes}:${oldParsed.seconds})`,
+					" | ",
+					"new time:",
+					newTime,
+					`(${newParsed.minutes}:${newParsed.seconds})`,
+					" | ",
+					`${(this.time - newTime) / 1000}s difference`
+				);
+			} catch (err) {
+				console.error(err);
+			}
 			this.currentTime = newTime;
 			if (this.running) {
 				this.clock.pause();
@@ -70,10 +84,10 @@ export default {
 	border: 1px solid #ccc;
 	padding: 0 8px;
 	line-height: 44px;
-    white-space: nowrap;
-    will-change: transform;
-	font-family: 'Roboto Mono','Roboto';
-    height: 44px;
+	white-space: nowrap;
+	will-change: transform;
+	font-family: "Roboto Mono", "Roboto";
+	height: 44px;
 }
 .clock.running {
 	color: black;
