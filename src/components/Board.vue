@@ -66,9 +66,9 @@ export default {
 	},
 	computed: {
 		...mapGetters({
-            moveList: "getMoves",
-            currentPly: "getPly"
-        }),
+			moveList: "getMoves",
+			currentPly: "getPly"
+		}),
 		opponentColor: function() {
 			return this.orientation === "white" ? "black" : "white";
 		}
@@ -92,15 +92,21 @@ export default {
 		jump: function(ply) {
 			this.ground.cancelPremove();
 			this.ground.cancelMove();
-			const {fen, lastMove} = this.moveList[ply];
+			const { fen, lastMove } = this.moveList[ply];
 			this.ground.set({
-				fen, lastMove: [lastMove.from, lastMove.to],
+				fen,
+				lastMove: [lastMove.from, lastMove.to],
 				movable: {
 					color: undefined,
 					dests: undefined
 				}
 			});
-			console.log("in jump: ply:", ply, "moves length:", this.moveList.length);
+			console.log(
+				"in jump: ply:",
+				ply,
+				"moves length:",
+				this.moveList.length
+			);
 			if (ply === this.moveList.length - 1) {
 				this.updateBoard();
 			}
@@ -167,7 +173,7 @@ export default {
 					move.s_square !== orig
 			).s_square;
 		},
-		onMove: function(orig, dest, promotion, s_piece) {
+		onMove: function(orig, dest, promotion, s_piece, s_square) {
 			const legalMoves = this.game.moves({ verbose: true });
 			if (!promotion && this.isPromotion(orig, dest)) {
 				this.promotionOrig = orig;
@@ -206,7 +212,7 @@ export default {
 			if (s_piece) {
 				move_obj.s_piece = s_piece.charAt(0);
 			}
-			if (this.sPieceRookSquare) {
+			if (this.sPieceRookSquare && this.sPieceRookSquare === s_square) {
 				move_obj.s_square = this.sPieceRookSquare;
 			}
 			this.$socket.emit("move", move_obj);
@@ -331,7 +337,8 @@ export default {
 				this.sPieceSquare,
 				this.sPieceMoveDest,
 				undefined,
-				role
+				role,
+				square
 			);
 			if (role) this.addSPiece(role, square, this.flipTurn());
 			this.addingSPiece = false;
