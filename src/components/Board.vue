@@ -91,7 +91,7 @@ export default {
 		},
 		jump: function(ply) {
 			this.ground.cancelPremove();
-			this.ground.cancelMove();
+			// this.ground.cancelMove();
 			const { fen, lastMove } = this.moveList[ply];
 			this.ground.set({
 				fen,
