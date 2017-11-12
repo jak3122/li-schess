@@ -91,7 +91,6 @@ export default {
 		},
 		jump: function(ply) {
 			this.ground.cancelPremove();
-			// this.ground.cancelMove();
 			const { fen, lastMove } = this.moveList[ply];
 			this.ground.set({
 				fen,
@@ -354,8 +353,7 @@ export default {
 		},
 		performPremove: function() {
 			if (this.premove) {
-				const orig = this.premove[0];
-				const dest = this.premove[1];
+				const { orig, dest } = this.premove;
 				this.onMove(orig, dest);
 				this.ground.playPremove();
 				this.premove = null;
